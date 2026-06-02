@@ -1,0 +1,95 @@
+<mat-sidenav-container class="sidenav-container">
+  <!-- Sidenav -->
+  <mat-sidenav 
+    #sidenav 
+    [mode]="isMobile ? 'over' : 'side'"
+    [opened]="isMobile ? isMobileOpen : !isCollapsed"
+    [class.collapsed]="!isMobile && isCollapsed"
+    class="custom-sidenav"
+    (closedStart)="isMobileOpen = false">
+    
+    <div class="logo-area">
+      <div class="logo-icon">
+        <lucide-icon name="GraduationCap" class="logo-svg"></lucide-icon>
+      </div>
+      <span class="logo-text" *ngIf="!isCollapsed || isMobile">EduAdmin</span>
+    </div>
+
+    <mat-nav-list class="nav-list">
+      <a 
+        mat-list-item 
+        *ngFor="let item of menuItems" 
+        [routerLink]="item.path" 
+        routerLinkActive="active-link"
+        [matTooltip]="item.label"
+        [matTooltipDisabled]="!isCollapsed || isMobile"
+        matTooltipPosition="right"
+        matTooltipClass="nav-tooltip"
+        class="nav-item"
+        (click)="closeMobileDrawer()">
+        <div class="nav-item-content">
+          <lucide-icon [name]="item.icon" class="nav-icon"></lucide-icon>
+          <span class="nav-label" *ngIf="!isCollapsed || isMobile">{{ item.label }}</span>
+        </div>
+      </a>
+    </mat-nav-list>
+
+    <div class="sidenav-footer">
+      <button 
+        mat-icon-button 
+        class="collapse-btn" 
+        (click)="toggleSidenav()"
+        *ngIf="!isMobile"
+        [matTooltip]="isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
+        <lucide-icon [name]="isCollapsed ? 'ChevronRight' : 'ChevronLeft'"></lucide-icon>
+      </button>
+    </div>
+  </mat-sidenav>
+
+  <!-- Main Content Area -->
+  <mat-sidenav-content class="main-content">
+    <!-- Top Header Toolbar -->
+    <mat-toolbar class="custom-header">
+      <button 
+        mat-icon-button 
+        (click)="toggleSidenav()" 
+        class="mobile-menu-btn">
+        <lucide-icon name="Menu"></lucide-icon>
+      </button>
+      
+      <span class="header-spacer"></span>
+
+      <!-- Dark/Light Mode toggle -->
+      <button 
+        mat-icon-button 
+        (click)="toggleTheme()" 
+        class="theme-toggle-btn"
+        [matTooltip]="(isDark$ | async) ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+        <lucide-icon [name]="(isDark$ | async) ? 'Sun' : 'Moon'"></lucide-icon>
+      </button>
+
+      <!-- Profile Section -->
+      <div class="profile-widget">
+        <div class="profile-avatar">
+          <span>AD</span>
+        </div>
+        <div class="profile-info" *ngIf="!isMobile">
+          <span class="profile-name">Admin User</span>
+          <span class="profile-role">Super Admin</span>
+        </div>
+      </div>
+      
+      <!-- Global Progress Bar for HTTP REST requests -->
+      <mat-progress-bar 
+        *ngIf="loading$ | async" 
+        mode="indeterminate" 
+        class="header-progress-bar">
+      </mat-progress-bar>
+    </mat-toolbar>
+
+    <!-- Main View Routing Outlet -->
+    <div class="page-container">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

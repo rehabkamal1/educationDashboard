@@ -1,0 +1,281 @@
+{
+  "students": [
+    {
+      "id": "1",
+      "name": "Sarah Connor",
+      "email": "sarah.connor@edu.com",
+      "phone": "+1 (555) 019-2834",
+      "status": "Active",
+      "creationDate": "2026-01-15"
+    },
+    {
+      "id": "2",
+      "name": "John Connor",
+      "email": "john.connor@edu.com",
+      "phone": "+1 (555) 014-9988",
+      "status": "Active",
+      "creationDate": "2026-02-10"
+    },
+    {
+      "id": "3",
+      "name": "Bruce Wayne",
+      "email": "bruce.wayne@gotham.edu",
+      "phone": "+1 (555) 017-8822",
+      "status": "Active",
+      "creationDate": "2026-03-05"
+    },
+    {
+      "id": "4",
+      "name": "Clark Kent",
+      "email": "clark.kent@metropolis.edu",
+      "phone": "+1 (555) 012-3344",
+      "status": "Active",
+      "creationDate": "2026-03-10"
+    },
+    {
+      "id": "5",
+      "name": "Diana Prince",
+      "email": "diana.prince@themyscira.edu",
+      "phone": "+1 (555) 015-5566",
+      "status": "Active",
+      "creationDate": "2026-04-01"
+    },
+    {
+      "id": "6",
+      "name": "Barry Allen",
+      "email": "barry.allen@ccpd.edu",
+      "phone": "+1 (555) 016-7788",
+      "status": "Active",
+      "creationDate": "2026-04-15"
+    },
+    {
+      "id": "7",
+      "name": "Arthur Curry",
+      "email": "arthur.curry@atlantis.edu",
+      "phone": "+1 (555) 018-9900",
+      "status": "Active",
+      "creationDate": "2026-05-01"
+    },
+    {
+      "name": "Rehab Kamal",
+      "email": "wwwrehabkamal601@gmail.com",
+      "phone": "21345",
+      "status": "Active",
+      "creationDate": "2026-06-02",
+      "id": "P051weZElSs"
+    },
+    {
+      "name": "maka",
+      "email": "maka@gmail.com",
+      "phone": "123456789",
+      "status": "Active",
+      "creationDate": "2026-06-02",
+      "id": "pphC2y7Aa50"
+    },
+    {
+      "name": "Rehab Kamal",
+      "email": "wwwrehabkamal601@gmail.com",
+      "phone": "12345",
+      "status": "Active",
+      "creationDate": "2026-06-02",
+      "id": "hPN26UxnzWk"
+    },
+    {
+      "name": "rehab4",
+      "email": "rehab@gmail.com",
+      "phone": "234567",
+      "status": "Active",
+      "id": "wVTZ3b7YXGc"
+    },
+    {
+      "name": "samar kamal",
+      "email": "samar@gmail.com",
+      "phone": "12345678789",
+      "status": "Active",
+      "id": "U2adbsN0w6c"
+    }
+  ],
+  "teachers": [
+    {
+      "name": "Dr. Robert Wilso",
+      "specialization": "Computer Science",
+      "email": "r.wilson@university.edu",
+      "phone": "+1 (555) 001-1111",
+      "id": "1"
+    },
+    {
+      "name": "Prof. Emma Ston",
+      "specialization": "Mathematics",
+      "email": "e.stone@university.edu",
+      "phone": "+1 (555) 002-2222",
+      "id": "2"
+    },
+    {
+      "id": "4",
+      "name": "Prof. Sarah Miller",
+      "email": "s.miller@university.edu",
+      "phone": "+1 (555) 004-4444",
+      "specialization": "Literature"
+    },
+    {
+      "name": "mhmd",
+      "specialization": "test",
+      "email": "mhmd@gmail.com",
+      "phone": "1234567",
+      "id": "3N-dVVLXvg8"
+    },
+    {
+      "name": "teacher1",
+      "specialization": "test",
+      "email": "teacher1@gmail.com",
+      "phone": "+2012345678",
+      "id": "Wdl8B3kOzE8"
+    }
+  ],
+  "classes": [
+    {
+      "name": "Advanced Java Programmin",
+      "teacherId": 1,
+      "id": "1"
+    },
+    {
+      "id": "2",
+      "name": "Linear Algebra",
+      "teacherId": 2
+    },
+    {
+      "id": "4",
+      "name": "Modern Literature",
+      "teacherId": 4
+    },
+    {
+      "id": "5",
+      "name": "Web Development Basics",
+      "teacherId": 1
+    },
+    {
+      "id": "6",
+      "name": "Calculus II",
+      "teacherId": 2
+    },
+    {
+      "id": "7",
+      "name": "English Composition",
+      "teacherId": 4
+    },
+    {
+      "name": "class1",
+      "teacherId": "Wdl8B3kOzE8",
+      "id": "xzABpoq57qI"
+    }
+  ],
+  "sections": [
+    {
+      "name": "CS-101-Section A1",
+      "classId": 1,
+      "id": "1",
+      "studentIds": [
+        null,
+        3,
+        7,
+        null
+      ]
+    },
+    {
+      "id": "2",
+      "name": "MATH-201-Section B",
+      "classId": 2,
+      "studentIds": [
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "id": "3",
+      "name": "PHYS-301-Section C",
+      "classId": 3,
+      "studentIds": [
+        1,
+        5,
+        7
+      ]
+    },
+    {
+      "id": "4",
+      "name": "LIT-150-Section A",
+      "classId": 4,
+      "studentIds": [
+        3,
+        6,
+        7,
+        null
+      ]
+    },
+    {
+      "name": "صثقفغ",
+      "classId": 2,
+      "studentIds": [
+        null,
+        6,
+        null,
+        "ufQJuOs8Od0"
+      ],
+      "id": "5-5LzgwD0WQ"
+    },
+    {
+      "name": "section",
+      "classId": "xzABpoq57qI",
+      "id": "vZnkGSr8HJA",
+      "studentIds": [
+        "U2adbsN0w6c"
+      ]
+    }
+  ],
+  "lectures": [
+    {
+      "title": "Introduction to OOP",
+      "sectionId": 1,
+      "duration": "1.5 hours",
+      "id": "1"
+    },
+    {
+      "title": "Matrix Operations",
+      "sectionId": 4,
+      "duration": "2 hours",
+      "id": "2"
+    },
+    {
+      "id": "3",
+      "title": "Schrödinger Equation",
+      "sectionId": 3,
+      "duration": "1.75 hours"
+    },
+    {
+      "id": "4",
+      "title": "Romantic Poetry",
+      "sectionId": 4,
+      "duration": "1.5 hours"
+    },
+    {
+      "id": "5",
+      "title": "Design Patterns",
+      "sectionId": 1,
+      "duration": "2 hours"
+    },
+    {
+      "title": "lecture",
+      "sectionId": 3,
+      "duration": "70",
+      "id": "FrI5ivhYKJA"
+    },
+    {
+      "title": "lecture1",
+      "sectionId": "vZnkGSr8HJA",
+      "duration": "70",
+      "id": "sVk_meoCgiw"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}

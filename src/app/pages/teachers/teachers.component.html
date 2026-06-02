@@ -1,0 +1,97 @@
+<div class="teachers-container" *ngIf="!isLoading">
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Faculty Directory</h1>
+      <p>Onboard, modify and audit university educators and their specializations.</p>
+    </div>
+    <button class="gradient-btn onboarding-btn" (click)="openAddDialog()">
+      <lucide-icon name="GraduationCap" class="btn-icon"></lucide-icon>
+      Onboard Teacher
+    </button>
+  </div>
+
+  <!-- Search & Sort -->
+  <mat-card class="premium-card filter-card">
+    <mat-card-content class="filter-content filter-sort-row">
+      <lucide-icon name="GraduationCap" class="search-icon"></lucide-icon>
+      <input
+        type="text"
+        (keyup)="applyFilter($event)"
+        placeholder="Search faculty by name, specialization, or email..."
+        class="search-input">
+      <mat-form-field appearance="outline" class="sort-field" subscriptSizing="dynamic">
+        <mat-label>Sort by</mat-label>
+        <mat-select [value]="sortField" (selectionChange)="onSortFieldChange($event.value)">
+          <mat-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button
+        type="button"
+        class="sort-direction-btn"
+        (click)="toggleSortDirection()"
+        [matTooltip]="'Sort direction: ' + sortDirectionLabel">
+        <lucide-icon [name]="sortDirection === 'asc' ? 'ArrowUp' : 'ArrowDown'" class="sort-dir-icon"></lucide-icon>
+        <span>{{ sortDirectionLabel }}</span>
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Teachers Grid -->
+  <div class="teachers-grid">
+    <mat-card class="premium-card teacher-card" *ngFor="let teacher of filteredTeachers">
+      <mat-card-content class="card-body">
+        
+        <div class="teacher-avatar">
+          <span>{{ teacher.name.charAt(0) }}</span>
+        </div>
+        
+        <h3 class="teacher-name">{{ teacher.name }}</h3>
+        
+        <span class="specialization-tag">
+          {{ teacher.specialization }}
+        </span>
+
+        <div class="contact-info">
+          <div class="info-item">
+            <lucide-icon name="Users" class="info-icon"></lucide-icon>
+            <span class="info-text">{{ teacher.email }}</span>
+          </div>
+          <div class="info-item">
+            <lucide-icon name="Users" class="info-icon"></lucide-icon>
+            <span class="info-text">{{ teacher.phone }}</span>
+          </div>
+        </div>
+
+      </mat-card-content>
+
+      <div class="card-actions">
+        <button 
+          mat-icon-button 
+          class="action-btn edit" 
+          (click)="openEditDialog(teacher)"
+          matTooltip="Edit Profile">
+          <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          class="action-btn delete" 
+          (click)="deleteTeacher(teacher.id)"
+          matTooltip="Offboard Teacher">
+          <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
+        </button>
+      </div>
+    </mat-card>
+  </div>
+
+  <div *ngIf="filteredTeachers.length === 0" class="no-teachers">
+    No faculty members matched your criteria. Add a new teacher profile or refine your search query.
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-state" *ngIf="isLoading">
+  <div class="spinner-container">
+    <div class="premium-spinner"></div>
+    <span>Retrieving Faculty Registry...</span>
+  </div>
+</div>

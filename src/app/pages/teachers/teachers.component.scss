@@ -1,0 +1,197 @@
+.teachers-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .onboarding-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.filter-card {
+  .filter-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px !important;
+    background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 60%);
+
+    &.filter-sort-row .search-input {
+      flex: 1 1 200px;
+      min-width: 160px;
+    }
+
+    .search-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-color);
+    }
+
+    .search-input {
+      flex-grow: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      font-family: inherit;
+
+      &::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.8;
+      }
+    }
+  }
+}
+
+/* Teachers Grid */
+.teachers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.teacher-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 16px;
+  text-align: center;
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    flex-grow: 1;
+    padding: 0 !important;
+  }
+
+  .teacher-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    color: white;
+    font-size: 2rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px var(--accent-glow);
+    margin-bottom: 16px;
+  }
+
+  .teacher-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .specialization-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    background-color: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent-color) 25%, transparent);
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-bottom: 20px;
+    display: inline-block;
+  }
+
+  .contact-info {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+    text-align: left;
+    padding: 0 8px;
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+
+      .info-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--text-secondary);
+        flex-shrink: 0;
+      }
+
+      .info-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+}
+
+/* Actions Footer inside card */
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.action-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px !important;
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.2s !important;
+
+  .action-svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &.edit {
+    color: var(--accent-color) !important;
+    &:hover {
+      background-color: var(--accent-color) !important;
+      color: white !important;
+      border-color: var(--accent-color) !important;
+    }
+  }
+
+  &.delete {
+    color: var(--status-inactive-color) !important;
+    &:hover {
+      background-color: var(--status-inactive-color) !important;
+      color: white !important;
+      border-color: var(--status-inactive-color) !important;
+    }
+  }
+}
+
+.no-teachers {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+

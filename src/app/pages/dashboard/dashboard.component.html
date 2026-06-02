@@ -1,0 +1,144 @@
+<div class="dashboard-container" *ngIf="!isLoading">
+  <div class="welcome-header">
+    <h1>Dashboard Overview</h1>
+    <p>Welcome back! Here is a summary of your educational management ecosystem.</p>
+  </div>
+
+  <!-- Main Stats Grid -->
+  <div class="stats-grid">
+    <!-- Students -->
+    <mat-card class="premium-card stat-card students">
+      <mat-card-content class="stat-content">
+        <div class="stat-icon">
+          <lucide-icon name="Users"></lucide-icon>
+        </div>
+        <div class="stat-text">
+          <span class="stat-label">Total Students</span>
+          <span class="stat-value">{{ stats.students }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Teachers -->
+    <mat-card class="premium-card stat-card teachers">
+      <mat-card-content class="stat-content">
+        <div class="stat-icon">
+          <lucide-icon name="GraduationCap"></lucide-icon>
+        </div>
+        <div class="stat-text">
+          <span class="stat-label">Total Teachers</span>
+          <span class="stat-value">{{ stats.teachers }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Classes -->
+    <mat-card class="premium-card stat-card classes">
+      <mat-card-content class="stat-content">
+        <div class="stat-icon">
+          <lucide-icon name="BookOpen"></lucide-icon>
+        </div>
+        <div class="stat-text">
+          <span class="stat-label">Total Classes</span>
+          <span class="stat-value">{{ stats.classes }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Sections -->
+    <mat-card class="premium-card stat-card sections">
+      <mat-card-content class="stat-content">
+        <div class="stat-icon">
+          <lucide-icon name="LayoutGrid"></lucide-icon>
+        </div>
+        <div class="stat-text">
+          <span class="stat-label">Total Sections</span>
+          <span class="stat-value">{{ stats.sections }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Lectures -->
+    <mat-card class="premium-card stat-card lectures">
+      <mat-card-content class="stat-content">
+        <div class="stat-icon">
+          <lucide-icon name="Play"></lucide-icon>
+        </div>
+        <div class="stat-text">
+          <span class="stat-label">Total Lectures</span>
+          <span class="stat-value">{{ stats.lectures }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Detail Insights Grid -->
+  <div class="insights-grid">
+    <!-- Active Student Ratio -->
+    <mat-card class="premium-card insight-card">
+      <mat-card-header>
+        <mat-card-title>Student Participation</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="insight-content">
+        <div class="metric-block">
+          <div class="metric-header">
+            <span>Active Student Rate</span>
+            <span class="metric-val">{{ studentDetails.activePercentage }}%</span>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="studentDetails.activePercentage" class="metric-bar active-bar"></mat-progress-bar>
+          <div class="metric-legend">
+            <span>Active: <strong>{{ studentDetails.active }}</strong></span>
+            <span>Inactive: <strong>{{ studentDetails.inactive }}</strong></span>
+          </div>
+        </div>
+
+        <div class="metric-block">
+          <div class="metric-header">
+            <span>Section Enrollment Rate</span>
+            <span class="metric-val">{{ enrollmentRate }}%</span>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="enrollmentRate" class="metric-bar enroll-bar"></mat-progress-bar>
+          <div class="metric-desc">
+            Percentage of total registered students currently enrolled in at least one course section.
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Latest Students Table -->
+    <mat-card class="premium-card insight-card">
+      <mat-card-header>
+        <mat-card-title>Recent Registrations</mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="insight-content">
+        <div class="recent-list">
+          <div class="recent-item" *ngFor="let student of latestStudents">
+            <div class="recent-avatar">
+              <span>{{ student.name.charAt(0) }}</span>
+            </div>
+            <div class="recent-info">
+              <span class="recent-name">{{ student.name }}</span>
+              <span class="recent-email">{{ student.email }}</span>
+            </div>
+            <div class="recent-status">
+              <span class="status-badge" [ngClass]="student.status.toLowerCase()">
+                {{ student.status }}
+              </span>
+            </div>
+          </div>
+          <div *ngIf="latestStudents.length === 0" class="no-records">
+            No students registered yet.
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+<!-- Core Loading State -->
+<div class="loading-state" *ngIf="isLoading">
+  <div class="spinner-container">
+    <div class="premium-spinner"></div>
+    <span>Loading Analytics Dashboard...</span>
+  </div>
+</div>

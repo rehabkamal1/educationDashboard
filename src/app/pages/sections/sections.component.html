@@ -1,0 +1,96 @@
+<div class="sections-container" *ngIf="!isLoading">
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Sections Management</h1>
+      <p>Create and manage course sections, class divisions and groups.</p>
+    </div>
+    <button class="gradient-btn add-btn" (click)="openAddDialog()">
+      <lucide-icon name="Plus" class="btn-icon"></lucide-icon>
+      Create Section
+    </button>
+  </div>
+
+  <mat-card class="premium-card filter-card">
+    <mat-card-content class="filter-content filter-sort-row">
+      <lucide-icon name="LayoutGrid" class="search-icon"></lucide-icon>
+      <span class="sort-toolbar-label">Sort sections</span>
+      <mat-form-field appearance="outline" class="sort-field" subscriptSizing="dynamic">
+        <mat-label>Sort by</mat-label>
+        <mat-select [value]="sortField" (selectionChange)="onSortFieldChange($event.value)">
+          <mat-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button
+        type="button"
+        class="sort-direction-btn"
+        (click)="toggleSortDirection()"
+        [matTooltip]="'Sort direction: ' + sortDirectionLabel">
+        <lucide-icon [name]="sortDirection === 'asc' ? 'ArrowUp' : 'ArrowDown'" class="sort-dir-icon"></lucide-icon>
+        <span>{{ sortDirectionLabel }}</span>
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Sections Grid -->
+  <div class="sections-grid">
+    <mat-card class="premium-card section-card" *ngFor="let section of sortedSections">
+      <mat-card-content class="card-body">
+        
+        <div class="section-header">
+          <h3 class="section-name">{{ section.name }}</h3>
+          <span class="section-badge">{{ getClassName(section.classId) }}</span>
+        </div>
+        
+        <div class="section-info">
+          <div class="info-item">
+            <lucide-icon name="BookOpen" class="info-icon"></lucide-icon>
+            <span class="info-label">Class:</span>
+            <span class="info-value">{{ getClassName(section.classId) }}</span>
+          </div>
+          <div class="info-item">
+            <lucide-icon name="Users" class="info-icon"></lucide-icon>
+            <span class="info-label">Enrolled Students:</span>
+            <span class="info-value">{{ (section.studentIds || []).length }} students</span>
+          </div>
+        </div>
+
+      </mat-card-content>
+
+      <div class="card-actions">
+        <button 
+          mat-icon-button 
+          class="action-btn enroll" 
+          (click)="openEnrollmentDialog(section)"
+          matTooltip="Manage Enrollments">
+          <lucide-icon name="UserCheck" class="action-svg"></lucide-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          class="action-btn edit" 
+          (click)="openEditDialog(section)"
+          matTooltip="Edit Section">
+          <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          class="action-btn delete" 
+          (click)="deleteSection(section.id)"
+          matTooltip="Delete Section">
+          <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
+        </button>
+      </div>
+    </mat-card>
+  </div>
+
+  <div *ngIf="sortedSections.length === 0" class="no-sections">
+    No sections available. Create a new section to get started.
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-state" *ngIf="isLoading">
+  <div class="spinner-container">
+    <div class="premium-spinner"></div>
+    <span>Loading Sections...</span>
+  </div>
+</div>

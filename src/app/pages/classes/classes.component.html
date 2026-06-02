@@ -1,0 +1,87 @@
+<div class="classes-container" *ngIf="!isLoading">
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Classes Management</h1>
+      <p>Create, modify and manage all classes and their assigned instructors.</p>
+    </div>
+    <button class="gradient-btn add-btn" (click)="openAddDialog()">
+      <lucide-icon name="BookOpen" class="btn-icon"></lucide-icon>
+      Create Class
+    </button>
+  </div>
+
+  <p class="table-sort-hint">Click column headers to sort the table.</p>
+
+  <!-- Classes Data Table -->
+  <div class="table-container premium-card">
+    <table mat-table [dataSource]="dataSource" matSort class="custom-table">
+      
+      <!-- ID Column -->
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> ID </th>
+        <td mat-cell *matCellDef="let element"> #{{element.id}} </td>
+      </ng-container>
+
+      <!-- Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Class Name </th>
+        <td mat-cell *matCellDef="let element" class="font-semibold text-primary"> {{element.name}} </td>
+      </ng-container>
+
+      <!-- Teacher Column -->
+      <ng-container matColumnDef="teacher">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Instructor </th>
+        <td mat-cell *matCellDef="let element">
+          {{ getTeacherName(element.teacherId) }}
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef> Actions </th>
+        <td mat-cell *matCellDef="let element" (click)="$event.stopPropagation()">
+          <div class="action-buttons">
+            <button 
+              mat-icon-button 
+              class="action-btn edit" 
+              (click)="openEditDialog(element)"
+              matTooltip="Edit Class">
+              <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              class="action-btn delete" 
+              (click)="deleteClass(element.id)"
+              matTooltip="Delete Class">
+              <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <mat-paginator 
+      [pageSizeOptions]="[10]"
+      [length]="dataSource.data.length"
+      [pageSize]="10"
+      showFirstLastButtons
+      aria-label="Select page of classes"
+      class="custom-paginator">
+    </mat-paginator>
+  </div>
+
+  <div *ngIf="dataSource.data.length === 0" class="no-classes">
+    No classes found. Create a new class to get started.
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-state" *ngIf="isLoading">
+  <div class="spinner-container">
+    <div class="premium-spinner"></div>
+    <span>Loading Classes...</span>
+  </div>
+</div>

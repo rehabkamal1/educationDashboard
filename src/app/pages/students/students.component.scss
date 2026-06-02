@@ -1,0 +1,220 @@
+.students-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.filter-card {
+  border: 1px solid var(--border-color) !important;
+
+  .filter-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px !important;
+    background: linear-gradient(90deg, var(--accent-soft) 0%, transparent 60%);
+
+    .search-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-color);
+    }
+
+    .sort-hint {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+      margin-left: auto;
+    }
+
+    .search-input {
+      flex-grow: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      font-family: inherit;
+
+      &::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.8;
+      }
+    }
+  }
+}
+
+/* Data Table Container */
+.table-container {
+  background: var(--bg-secondary) !important;
+  overflow: hidden;
+}
+
+.custom-table {
+  width: 100%;
+  background: transparent !important;
+  border-collapse: collapse;
+
+  th.mat-mdc-header-cell {
+    background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-primary) 100%) !important;
+    color: var(--text-secondary) !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 16px 24px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  td.mat-mdc-cell {
+    padding: 16px 24px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+}
+
+/* Expanded Detail Row Animations */
+.element-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--accent-soft) !important;
+
+    td.mat-mdc-cell {
+      color: var(--text-primary) !important;
+    }
+  }
+
+  &.expanded-row {
+    background-color: var(--accent-soft) !important;
+
+    td.mat-mdc-cell {
+      color: var(--text-primary) !important;
+    }
+  }
+}
+
+.detail-row {
+  height: 0;
+  td {
+    padding: 0 !important;
+    border-bottom: none !important;
+  }
+}
+
+.element-detail {
+  overflow: hidden;
+  display: flex;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  padding: 24px 32px;
+  width: 100%;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .detail-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    .detail-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--accent-color);
+    }
+  }
+
+  .detail-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px !important;
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.2s !important;
+
+  .action-svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &.edit {
+    color: var(--accent-color) !important;
+    &:hover {
+      background-color: var(--accent-color) !important;
+      color: white !important;
+      border-color: var(--accent-color) !important;
+    }
+  }
+
+  &.delete {
+    color: var(--status-inactive-color) !important;
+    &:hover {
+      background-color: var(--status-inactive-color) !important;
+      color: white !important;
+      border-color: var(--status-inactive-color) !important;
+    }
+  }
+}
+
+.no-data {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.custom-paginator {
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  border-top: 1px solid var(--border-color);
+}
+
