@@ -1,14 +1,6 @@
 {
   "students": [
     {
-      "id": "1",
-      "name": "Sarah Connor",
-      "email": "sarah.connor@edu.com",
-      "phone": "+1 (555) 019-2834",
-      "status": "Active",
-      "creationDate": "2026-01-15"
-    },
-    {
       "id": "2",
       "name": "John Connor",
       "email": "john.connor@edu.com",
@@ -93,6 +85,14 @@
       "phone": "12345678789",
       "status": "Active",
       "id": "U2adbsN0w6c"
+    },
+    {
+      "name": "ahmed",
+      "email": "ahmed@gmail.com",
+      "phone": "010234567",
+      "status": "Inactive",
+      "creationDate": "2026-06-03",
+      "id": "pvK773Y6qGo"
     }
   ],
   "teachers": [
