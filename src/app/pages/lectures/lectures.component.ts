@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -11,20 +12,19 @@ import { LectureService } from '../../core/services/lecture.service';
 import { SectionService } from '../../core/services/section.service';
 import { ToastService } from '../../core/services/toast.service';
 import { LectureDialogComponent } from './lecture-dialog.component';
-
-declare const $: {
-  (selector: string): {
-    length: number;
-    DataTable(options?: object): { destroy(): void };
-  };
-  fn: { DataTable: { isDataTable(el: unknown): boolean } };
-};
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-lectures',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatDialogModule,
     MatTooltipModule,
@@ -34,9 +34,19 @@ declare const $: {
   styleUrls: ['./lectures.component.scss']
 })
 export class LecturesComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#lecturesTable';
+  private readonly columnCount = 5;
+
   dataSource = new MatTableDataSource<Lecture>([]);
   sections: Section[] = [];
   isLoading = true;
+
+  filters = {
+    id: '',
+    title: '',
+    section: '',
+    duration: '',
+  };
 
   constructor(
     private lectureService: LectureService,
@@ -57,50 +67,35 @@ export class LecturesComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.title },
+      { columnIndex: 2, value: this.filters.section },
+      { columnIndex: 3, value: this.filters.duration },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = { id: '', title: '', section: '', duration: '' };
+    clearColumnFilters(this.tableSelector, this.columnCount);
   }
 
   private initDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#lecturesTable');
-    if (!table.length || this.dataSource.data.length === 0) {
-      return;
-    }
-
-    try {
-      if ($.fn.DataTable.isDataTable(table)) {
-        table.DataTable().destroy();
-      }
-
-      table.DataTable({
-        pageLength: 10,
-        order: [[1, 'asc']],
-        columnDefs: [{ orderable: false, targets: 4 }],
-        language: {
-          searchPlaceholder: 'Search lectures...',
-        },
-      });
-    } catch {
-      // DataTables failed; table still shows Angular-rendered rows
-    }
-  }
-
-  private destroyDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#lecturesTable');
-    if (table.length && $.fn.DataTable.isDataTable(table)) {
-      try {
-        table.DataTable().destroy();
-      } catch {
-        // ignore teardown errors on detached tables
-      }
-    }
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#lecturesExportToolbar',
+      metaToolbarSelector: '#lecturesMetaToolbar',
+      pageLength: 10,
+      order: [[1, 'asc']],
+      nonOrderableTargets: [4],
+      exportFileName: 'lectures',
+      exportTitle: 'Lectures',
+      hasData: this.dataSource.data.length > 0,
+    });
   }
 
   private refreshDataTable(): void {
@@ -111,7 +106,7 @@ export class LecturesComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadData() {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
     forkJoin({
       lectures: this.lectureService.getAll(),

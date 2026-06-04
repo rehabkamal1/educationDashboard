@@ -1,4 +1,4 @@
-<div class="classes-container">
+<div class="classes-container data-table-page">
 
   <div class="page-header">
     <div class="header-text">
@@ -40,7 +40,7 @@
         <lucide-icon name="Layers" class="table-title-icon"></lucide-icon>
         <div>
           <h2>Class Registry</h2>
-          <p>Use the search box below to filter • Click column headers to sort</p>
+          <p>Filter by field, export results, sort columns</p>
         </div>
       </div>
       <span class="record-count" *ngIf="!isLoading && dataSource.data.length">
@@ -48,7 +48,40 @@
       </span>
     </div>
 
-    <div class="table-wrapper" *ngIf="dataSource.data.length > 0">
+    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div class="filter-panel-header">
+        <span class="filter-panel-label">Advanced Filters</span>
+        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+      </div>
+      <div class="filter-panel-grid">
+        <div class="filter-field">
+          <label for="classFilterId">ID</label>
+          <input id="classFilterId" type="text" [(ngModel)]="filters.id" placeholder="#1" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="classFilterName">Class Name</label>
+          <input id="classFilterName" type="text" [(ngModel)]="filters.name" placeholder="Class name" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="classFilterInstructor">Instructor</label>
+          <select id="classFilterInstructor" [(ngModel)]="filters.instructor">
+            <option value="">All Instructors</option>
+            <option *ngFor="let teacher of teachers" [value]="teacher.name">{{ teacher.name }}</option>
+          </select>
+        </div>
+        <div class="filter-panel-actions">
+          <button type="button" class="btn-filter-search" (click)="applyTableFilters()">Apply Filters</button>
+          <button type="button" class="btn-filter-reset" (click)="resetTableFilters()">Show All</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div id="classesExportToolbar" class="export-toolbar-slot"></div>
+      <div id="classesMetaToolbar" class="meta-toolbar-slot"></div>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
       <table id="classesTable" class="display custom-table">
         <thead>
           <tr>
@@ -61,21 +94,21 @@
         <tbody>
           <tr *ngFor="let element of dataSource.data; trackBy: trackByClassId" class="data-row">
             <td>
-              <span class="id-badge">#{{ element.id }}</span>
+              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
             </td>
             <td>
               <div class="class-cell">
                 <span class="row-avatar class">{{ element.name.charAt(0) }}</span>
-                <span class="font-semibold text-primary">{{ element.name }}</span>
+                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
               </div>
             </td>
             <td>
-              <div class="instructor-chip" *ngIf="getTeacherName(element.teacherId) !== '—'; else unassigned">
+              <div class="instructor-chip" *ngIf="getTeacherName(element.teacherId) !== '—'; else unassigned" [attr.data-export]="getTeacherName(element.teacherId)">
                 <span class="instructor-avatar">{{ getTeacherInitial(element.teacherId) }}</span>
                 <span>{{ getTeacherName(element.teacherId) }}</span>
               </div>
               <ng-template #unassigned>
-                <span class="text-muted">Unassigned</span>
+                <span class="text-muted" [attr.data-export]="'Unassigned'">Unassigned</span>
               </ng-template>
             </td>
             <td>

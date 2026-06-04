@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,20 +16,19 @@ import { TeacherService } from '../../core/services/teacher.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ClassDialogComponent } from './class-dialog.component';
 import { forkJoin } from 'rxjs';
-
-declare const $: {
-  (selector: string): {
-    length: number;
-    DataTable(options?: object): { destroy(): void };
-  };
-  fn: { DataTable: { isDataTable(el: unknown): boolean } };
-};
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-classes',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatDialogModule,
     MatButtonModule,
     MatTooltipModule,
@@ -41,9 +41,18 @@ declare const $: {
   styleUrls: ['./classes.component.scss']
 })
 export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#classesTable';
+  private readonly columnCount = 4;
+
   dataSource = new MatTableDataSource<Class>([]);
   teachers: Teacher[] = [];
   isLoading = true;
+
+  filters = {
+    id: '',
+    name: '',
+    instructor: '',
+  };
 
   constructor(
     private classService: ClassService,
@@ -64,50 +73,34 @@ export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.name },
+      { columnIndex: 2, value: this.filters.instructor },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = { id: '', name: '', instructor: '' };
+    clearColumnFilters(this.tableSelector, this.columnCount);
   }
 
   private initDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#classesTable');
-    if (!table.length || this.dataSource.data.length === 0) {
-      return;
-    }
-
-    try {
-      if ($.fn.DataTable.isDataTable(table)) {
-        table.DataTable().destroy();
-      }
-
-      table.DataTable({
-        pageLength: 10,
-        order: [[0, 'asc']],
-        columnDefs: [{ orderable: false, targets: 3 }],
-        language: {
-          searchPlaceholder: 'Search classes...',
-        },
-      });
-    } catch {
-      // DataTables failed; table still shows Angular-rendered rows
-    }
-  }
-
-  private destroyDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#classesTable');
-    if (table.length && $.fn.DataTable.isDataTable(table)) {
-      try {
-        table.DataTable().destroy();
-      } catch {
-        // ignore teardown errors on detached tables
-      }
-    }
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#classesExportToolbar',
+      metaToolbarSelector: '#classesMetaToolbar',
+      pageLength: 10,
+      order: [[0, 'asc']],
+      nonOrderableTargets: [3],
+      exportFileName: 'classes',
+      exportTitle: 'Classes',
+      hasData: this.dataSource.data.length > 0,
+    });
   }
 
   private refreshDataTable(): void {
@@ -118,7 +111,7 @@ export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadData() {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
 
     forkJoin({

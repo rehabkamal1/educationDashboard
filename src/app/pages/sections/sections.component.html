@@ -1,4 +1,4 @@
-<div class="sections-container">
+<div class="sections-container data-table-page">
 
   <div class="page-header">
     <div class="header-text">
@@ -48,12 +48,49 @@
         <lucide-icon name="LayoutGrid" class="table-title-icon"></lucide-icon>
         <div>
           <h2>Section Registry</h2>
-          <p>Use the search box below to filter • Click column headers to sort</p>
+          <p>Filter by field, export results, sort columns</p>
         </div>
       </div>
       <span class="record-count" *ngIf="dataSource.data.length">
         {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
       </span>
+    </div>
+
+    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div class="filter-panel-header">
+        <span class="filter-panel-label">Advanced Filters</span>
+        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+      </div>
+      <div class="filter-panel-grid">
+        <div class="filter-field">
+          <label for="sectionFilterId">ID</label>
+          <input id="sectionFilterId" type="text" [(ngModel)]="filters.id" placeholder="#1" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="sectionFilterName">Section</label>
+          <input id="sectionFilterName" type="text" [(ngModel)]="filters.name" placeholder="Section name" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="sectionFilterClass">Class</label>
+          <select id="sectionFilterClass" [(ngModel)]="filters.className">
+            <option value="">All Classes</option>
+            <option *ngFor="let cls of classes" [value]="cls.name">{{ cls.name }}</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="sectionFilterEnrolled">Enrolled</label>
+          <input id="sectionFilterEnrolled" type="text" [(ngModel)]="filters.enrolled" placeholder="e.g. 5" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-panel-actions">
+          <button type="button" class="btn-filter-search" (click)="applyTableFilters()">Apply Filters</button>
+          <button type="button" class="btn-filter-reset" (click)="resetTableFilters()">Show All</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div id="sectionsExportToolbar" class="export-toolbar-slot"></div>
+      <div id="sectionsMetaToolbar" class="meta-toolbar-slot"></div>
     </div>
 
     <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
@@ -70,22 +107,22 @@
         <tbody>
           <tr *ngFor="let element of dataSource.data; trackBy: trackBySectionId" class="data-row">
             <td>
-              <span class="id-badge">#{{ element.id }}</span>
+              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
             </td>
             <td>
               <div class="section-cell">
                 <span class="row-avatar section">{{ element.name.charAt(0) }}</span>
-                <span class="font-semibold text-primary">{{ element.name }}</span>
+                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
               </div>
             </td>
             <td>
-              <span class="class-chip">
+              <span class="class-chip" [attr.data-export]="getClassName(element.classId)">
                 <lucide-icon name="BookOpen" class="chip-icon"></lucide-icon>
                 {{ getClassName(element.classId) }}
               </span>
             </td>
             <td>
-              <span class="metric-pill">
+              <span class="metric-pill" [attr.data-export]="getEnrolledCount(element)">
                 <lucide-icon name="Users" class="metric-icon"></lucide-icon>
                 {{ getEnrolledCount(element) }}
               </span>

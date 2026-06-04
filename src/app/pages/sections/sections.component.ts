@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -12,20 +13,19 @@ import { ClassService } from '../../core/services/class.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SectionDialogComponent } from './section-dialog.component';
 import { SectionEnrollmentDialogComponent } from './section-enrollment-dialog.component';
-
-declare const $: {
-  (selector: string): {
-    length: number;
-    DataTable(options?: object): { destroy(): void };
-  };
-  fn: { DataTable: { isDataTable(el: unknown): boolean } };
-};
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-sections',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatDialogModule,
     MatTooltipModule,
@@ -35,9 +35,19 @@ declare const $: {
   styleUrls: ['./sections.component.scss']
 })
 export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#sectionsTable';
+  private readonly columnCount = 5;
+
   dataSource = new MatTableDataSource<Section>([]);
   classes: Class[] = [];
   isLoading = true;
+
+  filters = {
+    id: '',
+    name: '',
+    className: '',
+    enrolled: '',
+  };
 
   constructor(
     private sectionService: SectionService,
@@ -58,50 +68,35 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.name },
+      { columnIndex: 2, value: this.filters.className },
+      { columnIndex: 3, value: this.filters.enrolled },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = { id: '', name: '', className: '', enrolled: '' };
+    clearColumnFilters(this.tableSelector, this.columnCount);
   }
 
   private initDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#sectionsTable');
-    if (!table.length || this.dataSource.data.length === 0) {
-      return;
-    }
-
-    try {
-      if ($.fn.DataTable.isDataTable(table)) {
-        table.DataTable().destroy();
-      }
-
-      table.DataTable({
-        pageLength: 10,
-        order: [[1, 'asc']],
-        columnDefs: [{ orderable: false, targets: 4 }],
-        language: {
-          searchPlaceholder: 'Search sections...',
-        },
-      });
-    } catch {
-      // DataTables failed; table still shows Angular-rendered rows
-    }
-  }
-
-  private destroyDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#sectionsTable');
-    if (table.length && $.fn.DataTable.isDataTable(table)) {
-      try {
-        table.DataTable().destroy();
-      } catch {
-        // ignore teardown errors on detached tables
-      }
-    }
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#sectionsExportToolbar',
+      metaToolbarSelector: '#sectionsMetaToolbar',
+      pageLength: 10,
+      order: [[1, 'asc']],
+      nonOrderableTargets: [4],
+      exportFileName: 'sections',
+      exportTitle: 'Sections',
+      hasData: this.dataSource.data.length > 0,
+    });
   }
 
   private refreshDataTable(): void {
@@ -112,7 +107,7 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadSections() {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
     forkJoin({
       sections: this.sectionService.getAll(),

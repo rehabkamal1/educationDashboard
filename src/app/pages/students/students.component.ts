@@ -1,5 +1,6 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,20 +18,19 @@ import { ClassService } from '../../core/services/class.service';
 import { LectureService } from '../../core/services/lecture.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StudentDialogComponent } from './student-dialog.component';
-
-declare const $: {
-  (selector: string): {
-    length: number;
-    DataTable(options?: object): { destroy(): void };
-  };
-  fn: { DataTable: { isDataTable(el: unknown): boolean } };
-};
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-students',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatInputModule,
     MatButtonModule,
     MatDialogModule,
@@ -49,6 +49,9 @@ declare const $: {
   ],
 })
 export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#studentsTable';
+  private readonly columnCount = 8;
+
   dataSource = new MatTableDataSource<Student>([]);
   expandedElement: Student | null = null;
 
@@ -56,6 +59,17 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
   classes: Class[] = [];
   lectures: Lecture[] = [];
   isLoading = true;
+
+  filters = {
+    id: '',
+    name: '',
+    email: '',
+    phone: '',
+    status: '',
+    classes: '',
+    sections: '',
+    lectures: '',
+  };
 
   constructor(
     private studentService: StudentService,
@@ -68,28 +82,6 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.dataSource.filterPredicate = (student, filter) => {
-      const q = filter.trim().toLowerCase();
-      return (
-        String(student.id).includes(q) ||
-        student.name.toLowerCase().includes(q) ||
-        student.email.toLowerCase().includes(q) ||
-        student.phone.toLowerCase().includes(q) ||
-        student.status.toLowerCase().includes(q)
-      );
-    };
-
-    this.dataSource.sortingDataAccessor = (student, property) => {
-      switch (property) {
-        case 'id':
-          return student.id;
-        case 'status':
-          return student.status;
-        default:
-          return (student as unknown as Record<string, string>)[property] ?? '';
-      }
-    };
-
     this.loadData();
   }
 
@@ -100,50 +92,48 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    const contactTerms = [this.filters.email, this.filters.phone].filter(Boolean).join(' ');
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.name },
+      { columnIndex: 2, value: contactTerms, smart: contactTerms.includes(' ') },
+      { columnIndex: 3, value: this.filters.status },
+      { columnIndex: 4, value: this.filters.classes },
+      { columnIndex: 5, value: this.filters.sections },
+      { columnIndex: 6, value: this.filters.lectures },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = {
+      id: '',
+      name: '',
+      email: '',
+      phone: '',
+      status: '',
+      classes: '',
+      sections: '',
+      lectures: '',
+    };
+    clearColumnFilters(this.tableSelector, this.columnCount);
   }
 
   private initDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#studentsTable');
-    if (!table.length || this.dataSource.data.length === 0) {
-      return;
-    }
-
-    try {
-      if ($.fn.DataTable.isDataTable(table)) {
-        table.DataTable().destroy();
-      }
-
-      table.DataTable({
-        pageLength: 10,
-        order: [[0, 'asc']],
-        columnDefs: [{ orderable: false, targets: 7 }],
-        language: {
-          searchPlaceholder: 'Search students...',
-        },
-      });
-    } catch {
-      // DataTables failed; table still shows Angular-rendered rows
-    }
-  }
-
-  private destroyDataTable(): void {
-    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-      return;
-    }
-
-    const table = $('#studentsTable');
-    if (table.length && $.fn.DataTable.isDataTable(table)) {
-      try {
-        table.DataTable().destroy();
-      } catch {
-        // ignore teardown errors on detached tables
-      }
-    }
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#studentsExportToolbar',
+      metaToolbarSelector: '#studentsMetaToolbar',
+      pageLength: 10,
+      order: [[0, 'asc']],
+      nonOrderableTargets: [7],
+      exportFileName: 'students',
+      exportTitle: 'Students',
+      hasData: this.dataSource.data.length > 0,
+    });
   }
 
   private refreshDataTable(): void {
@@ -154,7 +144,7 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadData() {
-    this.destroyDataTable();
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
     forkJoin({
       students: this.studentService.getAll(),
@@ -195,6 +185,15 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
     const studentSections = this.getStudentSections(studentId);
     const classIds = new Set(studentSections.map(s => s.classId));
     return this.classes.filter(c => classIds.has(c.id)).map(c => c.name);
+  }
+
+  getStudentClassNamesText(studentId: number): string {
+    const names = this.getStudentClassNames(studentId);
+    return names.length ? names.join(', ') : 'None enrolled';
+  }
+
+  getStudentContactExport(student: Student): string {
+    return `${student.email} | ${student.phone}`;
   }
 
   getInitials(name: string): string {

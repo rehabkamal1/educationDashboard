@@ -1,4 +1,4 @@
-<div class="students-container">
+<div class="students-container data-table-page">
 
   <ng-container *ngIf="!isLoading">
     <div class="page-header">
@@ -51,12 +51,66 @@
         <lucide-icon name="ClipboardList" class="table-title-icon"></lucide-icon>
         <div>
           <h2>Enrollment Ledger</h2>
-          <p>Use the search box below to filter • Click column headers to sort</p>
+          <p>Filter by field, export results, sort columns</p>
         </div>
       </div>
       <span class="record-count" *ngIf="dataSource.data.length">
         {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
       </span>
+    </div>
+
+    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div class="filter-panel-header">
+        <span class="filter-panel-label">Advanced Filters</span>
+        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+      </div>
+      <div class="filter-panel-grid">
+        <div class="filter-field">
+          <label for="studentFilterId">ID</label>
+          <input id="studentFilterId" type="text" [(ngModel)]="filters.id" placeholder="#1" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterName">Student</label>
+          <input id="studentFilterName" type="text" [(ngModel)]="filters.name" placeholder="Full name" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterEmail">Email</label>
+          <input id="studentFilterEmail" type="text" [(ngModel)]="filters.email" placeholder="email@..." (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterPhone">Phone</label>
+          <input id="studentFilterPhone" type="text" [(ngModel)]="filters.phone" placeholder="+20..." (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterStatus">Status</label>
+          <select id="studentFilterStatus" [(ngModel)]="filters.status">
+            <option value="">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterClasses">Classes</label>
+          <input id="studentFilterClasses" type="text" [(ngModel)]="filters.classes" placeholder="Class name" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterSections">Sections</label>
+          <input id="studentFilterSections" type="text" [(ngModel)]="filters.sections" placeholder="Count e.g. 2" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="studentFilterLectures">Lectures</label>
+          <input id="studentFilterLectures" type="text" [(ngModel)]="filters.lectures" placeholder="Count e.g. 5" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-panel-actions">
+          <button type="button" class="btn-filter-search" (click)="applyTableFilters()">Apply Filters</button>
+          <button type="button" class="btn-filter-reset" (click)="resetTableFilters()">Show All</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div id="studentsExportToolbar" class="export-toolbar-slot"></div>
+      <div id="studentsMetaToolbar" class="meta-toolbar-slot"></div>
     </div>
 
     <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
@@ -76,16 +130,16 @@
         <tbody>
           <tr *ngFor="let element of dataSource.data; trackBy: trackByStudentId" class="data-row">
             <td>
-              <span class="id-badge">#{{ element.id }}</span>
+              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
             </td>
             <td>
               <div class="student-cell">
                 <span class="row-avatar">{{ getInitials(element.name) }}</span>
-                <span class="font-semibold text-primary">{{ element.name }}</span>
+                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
               </div>
             </td>
             <td>
-              <div class="contact-stack">
+              <div class="contact-stack" [attr.data-export]="getStudentContactExport(element)">
                 <span class="contact-line">
                   <lucide-icon name="Mail" class="contact-icon"></lucide-icon>
                   {{ element.email }}
@@ -97,28 +151,28 @@
               </div>
             </td>
             <td>
-              <span class="status-badge" [ngClass]="element.status.toLowerCase()">
+              <span class="status-badge" [ngClass]="element.status.toLowerCase()" [attr.data-export]="element.status">
                 {{ element.status }}
               </span>
             </td>
             <td>
-              <div class="chip-list" *ngIf="getStudentClassNames(element.id).length; else noClasses">
+              <div class="chip-list" *ngIf="getStudentClassNames(element.id).length; else noClasses" [attr.data-export]="getStudentClassNamesText(element.id)">
                 <span class="class-chip" *ngFor="let name of getStudentClassNames(element.id)">
                   {{ name }}
                 </span>
               </div>
               <ng-template #noClasses>
-                <span class="text-muted">None enrolled</span>
+                <span class="text-muted" [attr.data-export]="'None enrolled'">None enrolled</span>
               </ng-template>
             </td>
             <td>
-              <span class="metric-pill">
+              <span class="metric-pill" [attr.data-export]="getStudentSections(element.id).length">
                 <lucide-icon name="Layers" class="metric-icon"></lucide-icon>
                 {{ getStudentSections(element.id).length }}
               </span>
             </td>
             <td>
-              <span class="metric-pill lectures">
+              <span class="metric-pill lectures" [attr.data-export]="getStudentLecturesCount(element.id)">
                 <lucide-icon name="Video" class="metric-icon"></lucide-icon>
                 {{ getStudentLecturesCount(element.id) }}
               </span>
