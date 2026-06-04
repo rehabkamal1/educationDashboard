@@ -39,7 +39,6 @@ import {
     LucideAngularModule
   ],
   templateUrl: './students.component.html',
-  styleUrls: ['./students.component.scss'],
   animations: [
     trigger('detailExpand', [
       state('collapsed,void', style({ height: '0px', minHeight: '0', display: 'none' })),
