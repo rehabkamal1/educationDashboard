@@ -96,13 +96,6 @@
   ],
   "teachers": [
     {
-      "name": "Dr. Robert Wilso",
-      "specialization": "Computer Science",
-      "email": "r.wilson@university.edu",
-      "phone": "+1 (555) 001-1111",
-      "id": "1"
-    },
-    {
       "name": "Prof. Emma Ston",
       "specialization": "Mathematics",
       "email": "e.stone@university.edu",
@@ -133,11 +126,6 @@
   ],
   "classes": [
     {
-      "name": "Advanced Java Programmin",
-      "teacherId": 1,
-      "id": "1"
-    },
-    {
       "id": "2",
       "name": "Linear Algebra",
       "teacherId": 2
@@ -146,11 +134,6 @@
       "id": "4",
       "name": "Modern Literature",
       "teacherId": 4
-    },
-    {
-      "id": "5",
-      "name": "Web Development Basics",
-      "teacherId": 1
     },
     {
       "id": "6",
@@ -190,16 +173,6 @@
         4,
         5,
         3
-      ]
-    },
-    {
-      "id": "3",
-      "name": "PHYS-301-Section C",
-      "classId": 3,
-      "studentIds": [
-        1,
-        5,
-        7
       ]
     },
     {

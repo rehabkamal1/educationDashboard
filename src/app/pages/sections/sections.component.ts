@@ -32,7 +32,6 @@ import {
     LucideAngularModule
   ],
   templateUrl: './sections.component.html',
-  styleUrls: ['./sections.component.scss']
 })
 export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly tableSelector = '#sectionsTable';

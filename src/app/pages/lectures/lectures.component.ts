@@ -31,7 +31,6 @@ import {
     LucideAngularModule
   ],
   templateUrl: './lectures.component.html',
-  styleUrls: ['./lectures.component.scss']
 })
 export class LecturesComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly tableSelector = '#lecturesTable';

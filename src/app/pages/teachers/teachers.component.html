@@ -1,97 +1,175 @@
-<div class="teachers-container" *ngIf="!isLoading">
+<div class="data-table-page">
+
   <div class="page-header">
     <div class="header-text">
       <h1>Faculty Directory</h1>
       <p>Onboard, modify and audit university educators and their specializations.</p>
     </div>
-    <button class="gradient-btn onboarding-btn" (click)="openAddDialog()">
+
+    <button class="gradient-btn add-btn" (click)="openAddDialog()">
       <lucide-icon name="GraduationCap" class="btn-icon"></lucide-icon>
       Onboard Teacher
     </button>
   </div>
 
-  <!-- Search & Sort -->
-  <mat-card class="premium-card filter-card">
-    <mat-card-content class="filter-content filter-sort-row">
-      <lucide-icon name="GraduationCap" class="search-icon"></lucide-icon>
-      <input
-        type="text"
-        (keyup)="applyFilter($event)"
-        placeholder="Search faculty by name, specialization, or email..."
-        class="search-input">
-      <mat-form-field appearance="outline" class="sort-field" subscriptSizing="dynamic">
-        <mat-label>Sort by</mat-label>
-        <mat-select [value]="sortField" (selectionChange)="onSortFieldChange($event.value)">
-          <mat-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button
-        type="button"
-        class="sort-direction-btn"
-        (click)="toggleSortDirection()"
-        [matTooltip]="'Sort direction: ' + sortDirectionLabel">
-        <lucide-icon [name]="sortDirection === 'asc' ? 'ArrowUp' : 'ArrowDown'" class="sort-dir-icon"></lucide-icon>
-        <span>{{ sortDirectionLabel }}</span>
-      </button>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Teachers Grid -->
-  <div class="teachers-grid">
-    <mat-card class="premium-card teacher-card" *ngFor="let teacher of filteredTeachers">
-      <mat-card-content class="card-body">
-        
-        <div class="teacher-avatar">
-          <span>{{ teacher.name.charAt(0) }}</span>
-        </div>
-        
-        <h3 class="teacher-name">{{ teacher.name }}</h3>
-        
-        <span class="specialization-tag">
-          {{ teacher.specialization }}
-        </span>
-
-        <div class="contact-info">
-          <div class="info-item">
-            <lucide-icon name="Users" class="info-icon"></lucide-icon>
-            <span class="info-text">{{ teacher.email }}</span>
-          </div>
-          <div class="info-item">
-            <lucide-icon name="Users" class="info-icon"></lucide-icon>
-            <span class="info-text">{{ teacher.phone }}</span>
-          </div>
-        </div>
-
-      </mat-card-content>
-
-      <div class="card-actions">
-        <button 
-          mat-icon-button 
-          class="action-btn edit" 
-          (click)="openEditDialog(teacher)"
-          matTooltip="Edit Profile">
-          <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
-        </button>
-        <button 
-          mat-icon-button 
-          class="action-btn delete" 
-          (click)="deleteTeacher(teacher.id)"
-          matTooltip="Offboard Teacher">
-          <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
-        </button>
+  <div class="stats-row" *ngIf="!isLoading">
+    <div class="stat-pill">
+      <div class="stat-icon teachers">
+        <lucide-icon name="GraduationCap"></lucide-icon>
       </div>
-    </mat-card>
+      <div class="stat-copy">
+        <span class="stat-value">{{ dataSource.data.length }}</span>
+        <span class="stat-label">Total Faculty</span>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon specializations">
+        <lucide-icon name="BookOpen"></lucide-icon>
+      </div>
+      <div class="stat-copy">
+        <span class="stat-value">{{ specializations.length }}</span>
+        <span class="stat-label">Specializations</span>
+      </div>
+    </div>
   </div>
 
-  <div *ngIf="filteredTeachers.length === 0" class="no-teachers">
-    No faculty members matched your criteria. Add a new teacher profile or refine your search query.
-  </div>
-</div>
+  <div class="table-container premium-card" [class.is-loading]="isLoading">
 
-<!-- Loading overlay -->
-<div class="loading-state" *ngIf="isLoading">
-  <div class="spinner-container">
-    <div class="premium-spinner"></div>
-    <span>Retrieving Faculty Registry...</span>
+    <div class="table-card-header" *ngIf="!isLoading">
+      <div class="table-title">
+        <lucide-icon name="GraduationCap" class="table-title-icon"></lucide-icon>
+        <div>
+          <h2>Faculty Registry</h2>
+          <p>Filter by field, export results, sort columns</p>
+        </div>
+      </div>
+      <span class="record-count" *ngIf="dataSource.data.length">
+        {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
+      </span>
+    </div>
+
+    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div class="filter-panel-header">
+        <span class="filter-panel-label">Advanced Filters</span>
+        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+      </div>
+      <div class="filter-panel-grid">
+        <div class="filter-field">
+          <label for="teacherFilterId">ID</label>
+          <input id="teacherFilterId" type="text" [(ngModel)]="filters.id" placeholder="#1" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="teacherFilterName">Name</label>
+          <input id="teacherFilterName" type="text" [(ngModel)]="filters.name" placeholder="Full name" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="teacherFilterSpecialization">Specialization</label>
+          <select id="teacherFilterSpecialization" [(ngModel)]="filters.specialization">
+            <option value="">All Specializations</option>
+            <option *ngFor="let spec of specializations" [value]="spec">{{ spec }}</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="teacherFilterEmail">Email</label>
+          <input id="teacherFilterEmail" type="text" [(ngModel)]="filters.email" placeholder="email@..." (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="teacherFilterPhone">Phone</label>
+          <input id="teacherFilterPhone" type="text" [(ngModel)]="filters.phone" placeholder="+20..." (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-panel-actions">
+          <button type="button" class="btn-filter-search" (click)="applyTableFilters()">Apply Filters</button>
+          <button type="button" class="btn-filter-reset" (click)="resetTableFilters()">Show All</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div id="teachersExportToolbar" class="export-toolbar-slot"></div>
+      <div id="teachersMetaToolbar" class="meta-toolbar-slot"></div>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
+      <table id="teachersTable" class="display custom-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Specialization</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let element of dataSource.data; trackBy: trackByTeacherId" class="data-row">
+            <td>
+              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
+            </td>
+            <td>
+              <div class="teacher-cell">
+                <span class="row-avatar teacher">{{ getInitials(element.name) }}</span>
+                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="specialization-chip" [attr.data-export]="element.specialization">
+                {{ element.specialization }}
+              </span>
+            </td>
+            <td>
+              <span class="contact-line">
+                <lucide-icon name="Mail" class="contact-icon"></lucide-icon>
+                <span [attr.data-export]="element.email">{{ element.email }}</span>
+              </span>
+            </td>
+            <td>
+              <span class="contact-line">
+                <lucide-icon name="Phone" class="contact-icon"></lucide-icon>
+                <span [attr.data-export]="element.phone">{{ element.phone }}</span>
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  class="action-btn edit"
+                  (click)="openEditDialog(element)"
+                  matTooltip="Edit Teacher">
+                  <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  class="action-btn delete"
+                  (click)="deleteTeacher(element.id)"
+                  matTooltip="Delete Teacher">
+                  <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="!isLoading && dataSource.data.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <lucide-icon name="GraduationCap"></lucide-icon>
+      </div>
+      <h3>No teachers yet</h3>
+      <p>Onboard your first faculty member to assign classes and sections.</p>
+      <button class="gradient-btn" (click)="openAddDialog()">
+        <lucide-icon name="GraduationCap" class="btn-icon"></lucide-icon>
+        Onboard Teacher
+      </button>
+    </div>
+
+    <div class="loading-state page-loading-overlay" *ngIf="isLoading">
+      <div class="spinner-container">
+        <div class="premium-spinner"></div>
+        <span>Retrieving Faculty Registry...</span>
+      </div>
+    </div>
   </div>
+
 </div>

@@ -38,7 +38,6 @@ import {
     MatInputModule
   ],
   templateUrl: './classes.component.html',
-  styleUrls: ['./classes.component.scss']
 })
 export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly tableSelector = '#classesTable';
