@@ -427,22 +427,108 @@
   }
 
   div.dt-button-collection {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    padding: 0.75em 0;
+    z-index: 2002;
+    overflow: hidden;
+    box-sizing: border-box;
     background: var(--card-bg) !important;
     border: 1px solid var(--border-color) !important;
     border-radius: var(--radius-md) !important;
     box-shadow: var(--card-shadow) !important;
-    padding: 8px !important;
     min-width: 200px;
 
     .dt-button {
+      position: relative;
+      left: 0;
+      right: 0;
+      width: 100%;
       display: block !important;
-      width: 100% !important;
       text-align: left !important;
-      margin-bottom: 4px !important;
+      margin: 0 !important;
+      padding: 0.5em 1em !important;
       background: var(--bg-tertiary) !important;
       color: var(--text-primary) !important;
-      border: 1px solid var(--border-color) !important;
+      border: none !important;
+      border-radius: 0 !important;
       box-shadow: none !important;
+      cursor: pointer;
+
+      &:hover:not(.disabled) {
+        background: var(--accent-soft) !important;
+        color: var(--accent-color) !important;
+      }
+
+      &.disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+    }
+  }
+
+  div.dt-button-background {
+    position: fixed;
+    inset: 0;
+    z-index: 2001;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  div.dt-button-info {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: min(400px, 90vw);
+    margin-top: -100px;
+    margin-left: -200px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow-hover);
+    text-align: center;
+    z-index: 2003;
+    color: var(--text-primary);
+
+    h2 {
+      padding: 2rem 2rem 1rem;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    > div {
+      padding: 1em 2rem 2rem;
+      color: var(--text-secondary);
+    }
+  }
+
+  .dt-button.processing {
+    color: rgba(0, 0, 0, 0.2);
+
+    &::after {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      box-sizing: border-box;
+      display: block;
+      content: '';
+      border: 2px solid var(--text-primary);
+      border-radius: 50%;
+      border-left-color: transparent;
+      border-right-color: transparent;
+      animation: dtb-spinner 1.5s infinite linear;
+    }
+  }
+
+  @keyframes dtb-spinner {
+    to {
+      transform: rotate(360deg);
     }
   }
 
