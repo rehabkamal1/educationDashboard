@@ -1,11 +1,9 @@
-import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
+import { FormsModule } from '@angular/forms';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LucideAngularModule } from 'lucide-angular';
 import { MatSelectModule } from '@angular/material/select';
@@ -17,16 +15,20 @@ import { ClassService } from '../../core/services/class.service';
 import { TeacherService } from '../../core/services/teacher.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ClassDialogComponent } from './class-dialog.component';
-import { connectTableControls } from '../../core/utils/table-data-source.util';
+import { forkJoin } from 'rxjs';
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-classes',
   standalone: true,
   imports: [
     CommonModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
+    FormsModule,
     MatDialogModule,
     MatButtonModule,
     MatTooltipModule,
@@ -38,53 +40,96 @@ import { connectTableControls } from '../../core/utils/table-data-source.util';
   templateUrl: './classes.component.html',
   styleUrls: ['./classes.component.scss']
 })
-export class ClassesComponent implements OnInit, AfterViewInit {
+export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#classesTable';
+  private readonly columnCount = 4;
+
   dataSource = new MatTableDataSource<Class>([]);
-  displayedColumns = ['id', 'name', 'teacher', 'actions'];
   teachers: Teacher[] = [];
   isLoading = true;
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  filters = {
+    id: '',
+    name: '',
+    instructor: '',
+  };
 
   constructor(
     private classService: ClassService,
     private teacherService: TeacherService,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.dataSource.sortingDataAccessor = (cls, property) => {
-      switch (property) {
-        case 'id':
-          return cls.id;
-        case 'teacher':
-          return this.getTeacherName(cls.teacherId);
-        default:
-          return cls.name;
-      }
-    };
     this.loadData();
   }
 
   ngAfterViewInit(): void {
-    this.connectTable();
+    if (!this.isLoading) {
+      this.initDataTable();
+    }
   }
 
-  private connectTable(): void {
-    connectTableControls(this.dataSource, this.paginator, this.sort);
+  ngOnDestroy(): void {
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.name },
+      { columnIndex: 2, value: this.filters.instructor },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = { id: '', name: '', instructor: '' };
+    clearColumnFilters(this.tableSelector, this.columnCount);
+  }
+
+  private initDataTable(): void {
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#classesExportToolbar',
+      metaToolbarSelector: '#classesMetaToolbar',
+      pageLength: 10,
+      order: [[0, 'asc']],
+      nonOrderableTargets: [3],
+      exportFileName: 'classes',
+      exportTitle: 'Classes',
+      hasData: this.dataSource.data.length > 0,
+    });
+  }
+
+  private refreshDataTable(): void {
+    setTimeout(() => {
+      this.initDataTable();
+      this.cdr.detectChanges();
+    });
   }
 
   loadData() {
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
-    this.teacherService.getAll().subscribe(teachers => {
-      this.teachers = teachers;
-    });
-    this.classService.getAll().subscribe(classes => {
-      this.dataSource.data = classes;
-      this.isLoading = false;
-      this.connectTable();
+
+    forkJoin({
+      teachers: this.teacherService.getAll(),
+      classes: this.classService.getAll(),
+    }).subscribe({
+      next: ({ teachers, classes }) => {
+        this.teachers = teachers;
+        this.dataSource.data = classes;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+        this.refreshDataTable();
+      },
+      error: () => {
+        this.toast.error('Failed to load classes.');
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
     });
   }
 
@@ -142,5 +187,14 @@ export class ClassesComponent implements OnInit, AfterViewInit {
     const tid = String(teacherId);
     const t = this.teachers.find(t => String(t.id) === tid);
     return t ? t.name : '—';
+  }
+
+  getTeacherInitial(teacherId: number): string {
+    const name = this.getTeacherName(teacherId);
+    return name === '—' ? '?' : name.charAt(0).toUpperCase();
+  }
+
+  trackByClassId(_index: number, cls: Class): number {
+    return cls.id;
   }
 }

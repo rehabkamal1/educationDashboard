@@ -1,4 +1,5 @@
-<div class="sections-container" *ngIf="!isLoading">
+<div class="sections-container data-table-page">
+
   <div class="page-header">
     <div class="header-text">
       <h1>Sections Management</h1>
@@ -10,87 +11,170 @@
     </button>
   </div>
 
-  <mat-card class="premium-card filter-card">
-    <mat-card-content class="filter-content filter-sort-row">
-      <lucide-icon name="LayoutGrid" class="search-icon"></lucide-icon>
-      <span class="sort-toolbar-label">Sort sections</span>
-      <mat-form-field appearance="outline" class="sort-field" subscriptSizing="dynamic">
-        <mat-label>Sort by</mat-label>
-        <mat-select [value]="sortField" (selectionChange)="onSortFieldChange($event.value)">
-          <mat-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button
-        type="button"
-        class="sort-direction-btn"
-        (click)="toggleSortDirection()"
-        [matTooltip]="'Sort direction: ' + sortDirectionLabel">
-        <lucide-icon [name]="sortDirection === 'asc' ? 'ArrowUp' : 'ArrowDown'" class="sort-dir-icon"></lucide-icon>
-        <span>{{ sortDirectionLabel }}</span>
-      </button>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Sections Grid -->
-  <div class="sections-grid">
-    <mat-card class="premium-card section-card" *ngFor="let section of sortedSections">
-      <mat-card-content class="card-body">
-        
-        <div class="section-header">
-          <h3 class="section-name">{{ section.name }}</h3>
-          <span class="section-badge">{{ getClassName(section.classId) }}</span>
-        </div>
-        
-        <div class="section-info">
-          <div class="info-item">
-            <lucide-icon name="BookOpen" class="info-icon"></lucide-icon>
-            <span class="info-label">Class:</span>
-            <span class="info-value">{{ getClassName(section.classId) }}</span>
-          </div>
-          <div class="info-item">
-            <lucide-icon name="Users" class="info-icon"></lucide-icon>
-            <span class="info-label">Enrolled Students:</span>
-            <span class="info-value">{{ (section.studentIds || []).length }} students</span>
-          </div>
-        </div>
-
-      </mat-card-content>
-
-      <div class="card-actions">
-        <button 
-          mat-icon-button 
-          class="action-btn enroll" 
-          (click)="openEnrollmentDialog(section)"
-          matTooltip="Manage Enrollments">
-          <lucide-icon name="UserCheck" class="action-svg"></lucide-icon>
-        </button>
-        <button 
-          mat-icon-button 
-          class="action-btn edit" 
-          (click)="openEditDialog(section)"
-          matTooltip="Edit Section">
-          <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
-        </button>
-        <button 
-          mat-icon-button 
-          class="action-btn delete" 
-          (click)="deleteSection(section.id)"
-          matTooltip="Delete Section">
-          <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
-        </button>
+  <div class="stats-row" *ngIf="!isLoading">
+    <div class="stat-pill">
+      <div class="stat-icon sections">
+        <lucide-icon name="LayoutGrid"></lucide-icon>
       </div>
-    </mat-card>
+      <div class="stat-copy">
+        <span class="stat-value">{{ dataSource.data.length }}</span>
+        <span class="stat-label">Total Sections</span>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon enrolled">
+        <lucide-icon name="Users"></lucide-icon>
+      </div>
+      <div class="stat-copy">
+        <span class="stat-value">{{ getTotalEnrolled() }}</span>
+        <span class="stat-label">Enrolled Students</span>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon classes">
+        <lucide-icon name="BookOpen"></lucide-icon>
+      </div>
+      <div class="stat-copy">
+        <span class="stat-value">{{ classes.length }}</span>
+        <span class="stat-label">Linked Classes</span>
+      </div>
+    </div>
   </div>
 
-  <div *ngIf="sortedSections.length === 0" class="no-sections">
-    No sections available. Create a new section to get started.
-  </div>
-</div>
+  <div class="table-container premium-card" [class.is-loading]="isLoading">
 
-<!-- Loading overlay -->
-<div class="loading-state" *ngIf="isLoading">
-  <div class="spinner-container">
-    <div class="premium-spinner"></div>
-    <span>Loading Sections...</span>
+    <div class="table-card-header" *ngIf="!isLoading">
+      <div class="table-title">
+        <lucide-icon name="LayoutGrid" class="table-title-icon"></lucide-icon>
+        <div>
+          <h2>Section Registry</h2>
+          <p>Filter by field, export results, sort columns</p>
+        </div>
+      </div>
+      <span class="record-count" *ngIf="dataSource.data.length">
+        {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
+      </span>
+    </div>
+
+    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div class="filter-panel-header">
+        <span class="filter-panel-label">Advanced Filters</span>
+        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+      </div>
+      <div class="filter-panel-grid">
+        <div class="filter-field">
+          <label for="sectionFilterId">ID</label>
+          <input id="sectionFilterId" type="text" [(ngModel)]="filters.id" placeholder="#1" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="sectionFilterName">Section</label>
+          <input id="sectionFilterName" type="text" [(ngModel)]="filters.name" placeholder="Section name" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-field">
+          <label for="sectionFilterClass">Class</label>
+          <select id="sectionFilterClass" [(ngModel)]="filters.className">
+            <option value="">All Classes</option>
+            <option *ngFor="let cls of classes" [value]="cls.name">{{ cls.name }}</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="sectionFilterEnrolled">Enrolled</label>
+          <input id="sectionFilterEnrolled" type="text" [(ngModel)]="filters.enrolled" placeholder="e.g. 5" (keyup.enter)="applyTableFilters()">
+        </div>
+        <div class="filter-panel-actions">
+          <button type="button" class="btn-filter-search" (click)="applyTableFilters()">Apply Filters</button>
+          <button type="button" class="btn-filter-reset" (click)="resetTableFilters()">Show All</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
+      <div id="sectionsExportToolbar" class="export-toolbar-slot"></div>
+      <div id="sectionsMetaToolbar" class="meta-toolbar-slot"></div>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
+      <table id="sectionsTable" class="display custom-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Section</th>
+            <th>Class</th>
+            <th>Enrolled</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let element of dataSource.data; trackBy: trackBySectionId" class="data-row">
+            <td>
+              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
+            </td>
+            <td>
+              <div class="section-cell">
+                <span class="row-avatar section">{{ element.name.charAt(0) }}</span>
+                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="class-chip" [attr.data-export]="getClassName(element.classId)">
+                <lucide-icon name="BookOpen" class="chip-icon"></lucide-icon>
+                {{ getClassName(element.classId) }}
+              </span>
+            </td>
+            <td>
+              <span class="metric-pill" [attr.data-export]="getEnrolledCount(element)">
+                <lucide-icon name="Users" class="metric-icon"></lucide-icon>
+                {{ getEnrolledCount(element) }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  class="action-btn enroll"
+                  (click)="openEnrollmentDialog(element)"
+                  matTooltip="Manage Enrollments">
+                  <lucide-icon name="UserCheck" class="action-svg"></lucide-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  class="action-btn edit"
+                  (click)="openEditDialog(element)"
+                  matTooltip="Edit Section">
+                  <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  class="action-btn delete"
+                  (click)="deleteSection(element.id)"
+                  matTooltip="Delete Section">
+                  <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="!isLoading && dataSource.data.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <lucide-icon name="LayoutGrid"></lucide-icon>
+      </div>
+      <h3>No sections yet</h3>
+      <p>Create your first section to organize students and link lectures.</p>
+      <button class="gradient-btn" (click)="openAddDialog()">
+        <lucide-icon name="Plus" class="btn-icon"></lucide-icon>
+        Create Section
+      </button>
+    </div>
+
+    <div class="loading-state page-loading-overlay" *ngIf="isLoading">
+      <div class="spinner-container">
+        <div class="premium-spinner"></div>
+        <span>Loading Sections...</span>
+      </div>
+    </div>
   </div>
+
 </div>

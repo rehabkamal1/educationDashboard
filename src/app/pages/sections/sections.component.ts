@@ -1,13 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { FormsModule } from '@angular/forms';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { LucideAngularModule } from 'lucide-angular';
-import { sortBy, SortDirection } from '../../core/utils/list-sort.util';
 import { forkJoin } from 'rxjs';
 import { Section, Class } from '../../core/models/educational.models';
 import { SectionService } from '../../core/services/section.service';
@@ -15,64 +13,117 @@ import { ClassService } from '../../core/services/class.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SectionDialogComponent } from './section-dialog.component';
 import { SectionEnrollmentDialogComponent } from './section-enrollment-dialog.component';
-
-type SectionSortField = 'name' | 'class' | 'enrolled';
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-sections',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
+    FormsModule,
     MatButtonModule,
     MatDialogModule,
     MatTooltipModule,
-    MatFormFieldModule,
-    MatSelectModule,
     LucideAngularModule
   ],
   templateUrl: './sections.component.html',
   styleUrls: ['./sections.component.scss']
 })
-export class SectionsComponent implements OnInit {
-  sections: Section[] = [];
-  sortedSections: Section[] = [];
+export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#sectionsTable';
+  private readonly columnCount = 5;
+
+  dataSource = new MatTableDataSource<Section>([]);
   classes: Class[] = [];
   isLoading = true;
-  sortField: SectionSortField = 'name';
-  sortDirection: SortDirection = 'asc';
-  readonly sortOptions: { value: SectionSortField; label: string }[] = [
-    { value: 'name', label: 'Section Name' },
-    { value: 'class', label: 'Class' },
-    { value: 'enrolled', label: 'Enrolled Students' }
-  ];
+
+  filters = {
+    id: '',
+    name: '',
+    className: '',
+    enrolled: '',
+  };
 
   constructor(
     private sectionService: SectionService,
     private classService: ClassService,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadSections();
   }
 
+  ngAfterViewInit(): void {
+    if (!this.isLoading) {
+      this.initDataTable();
+    }
+  }
+
+  ngOnDestroy(): void {
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.name },
+      { columnIndex: 2, value: this.filters.className },
+      { columnIndex: 3, value: this.filters.enrolled },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = { id: '', name: '', className: '', enrolled: '' };
+    clearColumnFilters(this.tableSelector, this.columnCount);
+  }
+
+  private initDataTable(): void {
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#sectionsExportToolbar',
+      metaToolbarSelector: '#sectionsMetaToolbar',
+      pageLength: 10,
+      order: [[1, 'asc']],
+      nonOrderableTargets: [4],
+      exportFileName: 'sections',
+      exportTitle: 'Sections',
+      hasData: this.dataSource.data.length > 0,
+    });
+  }
+
+  private refreshDataTable(): void {
+    setTimeout(() => {
+      this.initDataTable();
+      this.cdr.detectChanges();
+    });
+  }
+
   loadSections() {
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
     forkJoin({
       sections: this.sectionService.getAll(),
       classes: this.classService.getAll()
     }).subscribe({
       next: (res) => {
-        this.sections = res.sections;
+        this.dataSource.data = res.sections;
         this.classes = res.classes;
-        this.refreshList();
         this.isLoading = false;
+        this.cdr.detectChanges();
+        this.refreshDataTable();
       },
       error: () => {
         this.toast.error('Failed to load sections and classes.');
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -83,35 +134,19 @@ export class SectionsComponent implements OnInit {
     return cls ? cls.name : '—';
   }
 
-  onSortFieldChange(field: SectionSortField) {
-    this.sortField = field;
-    this.refreshList();
+  getEnrolledCount(section: Section): number {
+    return (section.studentIds || []).length;
   }
 
-  toggleSortDirection() {
-    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.refreshList();
-  }
-
-  get sortDirectionLabel(): string {
-    return this.sortDirection === 'asc' ? 'A → Z' : 'Z → A';
-  }
-
-  private refreshList(): void {
-    this.sortedSections = sortBy(
-      this.sections,
-      (section) => {
-        switch (this.sortField) {
-          case 'class':
-            return this.getClassName(section.classId);
-          case 'enrolled':
-            return (section.studentIds || []).length;
-          default:
-            return section.name;
-        }
-      },
-      this.sortDirection
+  getTotalEnrolled(): number {
+    return this.dataSource.data.reduce(
+      (sum, s) => sum + (s.studentIds || []).length,
+      0
     );
+  }
+
+  trackBySectionId(_index: number, section: Section): number {
+    return section.id;
   }
 
   openAddDialog() {

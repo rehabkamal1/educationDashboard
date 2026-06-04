@@ -18,3 +18,4 @@ export function sortBy<T>(
   const factor = direction === 'asc' ? 1 : -1;
   return [...items].sort((x, y) => factor * compareValues(getValue(x), getValue(y)));
 }
+

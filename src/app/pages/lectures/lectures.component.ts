@@ -1,77 +1,128 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { FormsModule } from '@angular/forms';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { LucideAngularModule } from 'lucide-angular';
-import { sortBy, SortDirection } from '../../core/utils/list-sort.util';
 import { forkJoin } from 'rxjs';
 import { Lecture, Section } from '../../core/models/educational.models';
 import { LectureService } from '../../core/services/lecture.service';
 import { SectionService } from '../../core/services/section.service';
 import { ToastService } from '../../core/services/toast.service';
 import { LectureDialogComponent } from './lecture-dialog.component';
-
-type LectureSortField = 'title' | 'section' | 'duration';
+import {
+  applyColumnFilters,
+  clearColumnFilters,
+  destroyAdvancedDataTable,
+  initAdvancedDataTable,
+} from '../../core/utils/datatable-advanced.util';
 
 @Component({
   selector: 'app-lectures',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
+    FormsModule,
     MatButtonModule,
     MatDialogModule,
     MatTooltipModule,
-    MatFormFieldModule,
-    MatSelectModule,
     LucideAngularModule
   ],
   templateUrl: './lectures.component.html',
   styleUrls: ['./lectures.component.scss']
 })
-export class LecturesComponent implements OnInit {
-  lectures: Lecture[] = [];
-  sortedLectures: Lecture[] = [];
+export class LecturesComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly tableSelector = '#lecturesTable';
+  private readonly columnCount = 5;
+
+  dataSource = new MatTableDataSource<Lecture>([]);
   sections: Section[] = [];
   isLoading = true;
-  sortField: LectureSortField = 'title';
-  sortDirection: SortDirection = 'asc';
-  readonly sortOptions: { value: LectureSortField; label: string }[] = [
-    { value: 'title', label: 'Title' },
-    { value: 'section', label: 'Section' },
-    { value: 'duration', label: 'Duration' }
-  ];
+
+  filters = {
+    id: '',
+    title: '',
+    section: '',
+    duration: '',
+  };
 
   constructor(
     private lectureService: LectureService,
     private sectionService: SectionService,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadData();
   }
 
+  ngAfterViewInit(): void {
+    if (!this.isLoading) {
+      this.initDataTable();
+    }
+  }
+
+  ngOnDestroy(): void {
+    destroyAdvancedDataTable(this.tableSelector);
+  }
+
+  applyTableFilters(): void {
+    applyColumnFilters(this.tableSelector, [
+      { columnIndex: 0, value: this.filters.id },
+      { columnIndex: 1, value: this.filters.title },
+      { columnIndex: 2, value: this.filters.section },
+      { columnIndex: 3, value: this.filters.duration },
+    ]);
+  }
+
+  resetTableFilters(): void {
+    this.filters = { id: '', title: '', section: '', duration: '' };
+    clearColumnFilters(this.tableSelector, this.columnCount);
+  }
+
+  private initDataTable(): void {
+    initAdvancedDataTable({
+      selector: this.tableSelector,
+      exportToolbarSelector: '#lecturesExportToolbar',
+      metaToolbarSelector: '#lecturesMetaToolbar',
+      pageLength: 10,
+      order: [[1, 'asc']],
+      nonOrderableTargets: [4],
+      exportFileName: 'lectures',
+      exportTitle: 'Lectures',
+      hasData: this.dataSource.data.length > 0,
+    });
+  }
+
+  private refreshDataTable(): void {
+    setTimeout(() => {
+      this.initDataTable();
+      this.cdr.detectChanges();
+    });
+  }
+
   loadData() {
+    destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
     forkJoin({
       lectures: this.lectureService.getAll(),
       sections: this.sectionService.getAll()
     }).subscribe({
       next: (res) => {
-        this.lectures = res.lectures;
+        this.dataSource.data = res.lectures;
         this.sections = res.sections;
-        this.refreshList();
         this.isLoading = false;
+        this.cdr.detectChanges();
+        this.refreshDataTable();
       },
       error: () => {
         this.toast.error('Failed to load lectures.');
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -82,35 +133,8 @@ export class LecturesComponent implements OnInit {
     return sec ? sec.name : '—';
   }
 
-  onSortFieldChange(field: LectureSortField) {
-    this.sortField = field;
-    this.refreshList();
-  }
-
-  toggleSortDirection() {
-    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.refreshList();
-  }
-
-  get sortDirectionLabel(): string {
-    return this.sortDirection === 'asc' ? 'A → Z' : 'Z → A';
-  }
-
-  private refreshList(): void {
-    this.sortedLectures = sortBy(
-      this.lectures,
-      (lecture) => {
-        switch (this.sortField) {
-          case 'section':
-            return this.getSectionName(lecture.sectionId);
-          case 'duration':
-            return lecture.duration;
-          default:
-            return lecture.title;
-        }
-      },
-      this.sortDirection
-    );
+  trackByLectureId(_index: number, lecture: Lecture): number {
+    return lecture.id;
   }
 
   openAddDialog() {
