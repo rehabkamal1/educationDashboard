@@ -1,8 +1,6 @@
-import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -19,16 +17,20 @@ import { ClassService } from '../../core/services/class.service';
 import { LectureService } from '../../core/services/lecture.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StudentDialogComponent } from './student-dialog.component';
-import { connectTableControls } from '../../core/utils/table-data-source.util';
+
+declare const $: {
+  (selector: string): {
+    length: number;
+    DataTable(options?: object): { destroy(): void };
+  };
+  fn: { DataTable: { isDataTable(el: unknown): boolean } };
+};
 
 @Component({
   selector: 'app-students',
   standalone: true,
   imports: [
     CommonModule,
-    MatTableModule,
-    MatPaginatorModule,
-    MatSortModule,
     MatInputModule,
     MatButtonModule,
     MatDialogModule,
@@ -46,9 +48,8 @@ import { connectTableControls } from '../../core/utils/table-data-source.util';
     ]),
   ],
 })
-export class StudentsComponent implements OnInit, AfterViewInit {
+export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
   dataSource = new MatTableDataSource<Student>([]);
-  displayedColumns = ['id', 'name', 'email', 'phone', 'status', 'actions'];
   expandedElement: Student | null = null;
 
   sections: Section[] = [];
@@ -56,16 +57,14 @@ export class StudentsComponent implements OnInit, AfterViewInit {
   lectures: Lecture[] = [];
   isLoading = true;
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
-
   constructor(
     private studentService: StudentService,
     private sectionService: SectionService,
     private classService: ClassService,
     private lectureService: LectureService,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -95,14 +94,67 @@ export class StudentsComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    connectTableControls(this.dataSource, this.paginator, this.sort);
+    if (!this.isLoading) {
+      this.initDataTable();
+    }
   }
 
-  private connectTable(): void {
-    connectTableControls(this.dataSource, this.paginator, this.sort);
+  ngOnDestroy(): void {
+    this.destroyDataTable();
+  }
+
+  private initDataTable(): void {
+    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
+      return;
+    }
+
+    const table = $('#studentsTable');
+    if (!table.length || this.dataSource.data.length === 0) {
+      return;
+    }
+
+    try {
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy();
+      }
+
+      table.DataTable({
+        pageLength: 10,
+        order: [[0, 'asc']],
+        columnDefs: [{ orderable: false, targets: 7 }],
+        language: {
+          searchPlaceholder: 'Search students...',
+        },
+      });
+    } catch {
+      // DataTables failed; table still shows Angular-rendered rows
+    }
+  }
+
+  private destroyDataTable(): void {
+    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
+      return;
+    }
+
+    const table = $('#studentsTable');
+    if (table.length && $.fn.DataTable.isDataTable(table)) {
+      try {
+        table.DataTable().destroy();
+      } catch {
+        // ignore teardown errors on detached tables
+      }
+    }
+  }
+
+  private refreshDataTable(): void {
+    setTimeout(() => {
+      this.initDataTable();
+      this.cdr.detectChanges();
+    });
   }
 
   loadData() {
+    this.destroyDataTable();
     this.isLoading = true;
     forkJoin({
       students: this.studentService.getAll(),
@@ -117,22 +169,15 @@ export class StudentsComponent implements OnInit, AfterViewInit {
         
         this.dataSource.data = res.students;
         this.isLoading = false;
-        this.connectTable();
+        this.cdr.detectChanges();
+        this.refreshDataTable();
       },
       error: () => {
         this.toast.error('Failed to load students and course metadata.');
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
-  }
-
-  applyFilter(event: Event) {
-    const filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filter = filterValue.trim().toLowerCase();
-
-    if (this.dataSource.paginator) {
-      this.dataSource.paginator.firstPage();
-    }
   }
 
   getStudentSections(studentId: number): Section[] {
@@ -146,11 +191,30 @@ export class StudentsComponent implements OnInit, AfterViewInit {
     return classIds.size;
   }
 
-  getStudentClassesList(studentId: number): string {
+  getStudentClassNames(studentId: number): string[] {
     const studentSections = this.getStudentSections(studentId);
     const classIds = new Set(studentSections.map(s => s.classId));
-    const matchingClasses = this.classes.filter(c => classIds.has(c.id));
-    return matchingClasses.map(c => c.name).join(', ') || 'No Classes Enrolled';
+    return this.classes.filter(c => classIds.has(c.id)).map(c => c.name);
+  }
+
+  getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase() || '?';
+  }
+
+  getActiveCount(): number {
+    return this.dataSource.data.filter(s => s.status === 'Active').length;
+  }
+
+  getInactiveCount(): number {
+    return this.dataSource.data.filter(s => s.status === 'Inactive').length;
+  }
+
+  trackByStudentId(_index: number, student: Student): number {
+    return student.id;
   }
 
   getStudentLecturesCount(studentId: number): number {

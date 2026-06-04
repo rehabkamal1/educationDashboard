@@ -1,13 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { LucideAngularModule } from 'lucide-angular';
-import { sortBy, SortDirection } from '../../core/utils/list-sort.util';
 import { forkJoin } from 'rxjs';
 import { Lecture, Section } from '../../core/models/educational.models';
 import { LectureService } from '../../core/services/lecture.service';
@@ -15,63 +12,122 @@ import { SectionService } from '../../core/services/section.service';
 import { ToastService } from '../../core/services/toast.service';
 import { LectureDialogComponent } from './lecture-dialog.component';
 
-type LectureSortField = 'title' | 'section' | 'duration';
+declare const $: {
+  (selector: string): {
+    length: number;
+    DataTable(options?: object): { destroy(): void };
+  };
+  fn: { DataTable: { isDataTable(el: unknown): boolean } };
+};
 
 @Component({
   selector: 'app-lectures',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
     MatButtonModule,
     MatDialogModule,
     MatTooltipModule,
-    MatFormFieldModule,
-    MatSelectModule,
     LucideAngularModule
   ],
   templateUrl: './lectures.component.html',
   styleUrls: ['./lectures.component.scss']
 })
-export class LecturesComponent implements OnInit {
-  lectures: Lecture[] = [];
-  sortedLectures: Lecture[] = [];
+export class LecturesComponent implements OnInit, AfterViewInit, OnDestroy {
+  dataSource = new MatTableDataSource<Lecture>([]);
   sections: Section[] = [];
   isLoading = true;
-  sortField: LectureSortField = 'title';
-  sortDirection: SortDirection = 'asc';
-  readonly sortOptions: { value: LectureSortField; label: string }[] = [
-    { value: 'title', label: 'Title' },
-    { value: 'section', label: 'Section' },
-    { value: 'duration', label: 'Duration' }
-  ];
 
   constructor(
     private lectureService: LectureService,
     private sectionService: SectionService,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadData();
   }
 
+  ngAfterViewInit(): void {
+    if (!this.isLoading) {
+      this.initDataTable();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroyDataTable();
+  }
+
+  private initDataTable(): void {
+    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
+      return;
+    }
+
+    const table = $('#lecturesTable');
+    if (!table.length || this.dataSource.data.length === 0) {
+      return;
+    }
+
+    try {
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy();
+      }
+
+      table.DataTable({
+        pageLength: 10,
+        order: [[1, 'asc']],
+        columnDefs: [{ orderable: false, targets: 4 }],
+        language: {
+          searchPlaceholder: 'Search lectures...',
+        },
+      });
+    } catch {
+      // DataTables failed; table still shows Angular-rendered rows
+    }
+  }
+
+  private destroyDataTable(): void {
+    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
+      return;
+    }
+
+    const table = $('#lecturesTable');
+    if (table.length && $.fn.DataTable.isDataTable(table)) {
+      try {
+        table.DataTable().destroy();
+      } catch {
+        // ignore teardown errors on detached tables
+      }
+    }
+  }
+
+  private refreshDataTable(): void {
+    setTimeout(() => {
+      this.initDataTable();
+      this.cdr.detectChanges();
+    });
+  }
+
   loadData() {
+    this.destroyDataTable();
     this.isLoading = true;
     forkJoin({
       lectures: this.lectureService.getAll(),
       sections: this.sectionService.getAll()
     }).subscribe({
       next: (res) => {
-        this.lectures = res.lectures;
+        this.dataSource.data = res.lectures;
         this.sections = res.sections;
-        this.refreshList();
         this.isLoading = false;
+        this.cdr.detectChanges();
+        this.refreshDataTable();
       },
       error: () => {
         this.toast.error('Failed to load lectures.');
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -82,35 +138,8 @@ export class LecturesComponent implements OnInit {
     return sec ? sec.name : '—';
   }
 
-  onSortFieldChange(field: LectureSortField) {
-    this.sortField = field;
-    this.refreshList();
-  }
-
-  toggleSortDirection() {
-    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.refreshList();
-  }
-
-  get sortDirectionLabel(): string {
-    return this.sortDirection === 'asc' ? 'A → Z' : 'Z → A';
-  }
-
-  private refreshList(): void {
-    this.sortedLectures = sortBy(
-      this.lectures,
-      (lecture) => {
-        switch (this.sortField) {
-          case 'section':
-            return this.getSectionName(lecture.sectionId);
-          case 'duration':
-            return lecture.duration;
-          default:
-            return lecture.title;
-        }
-      },
-      this.sortDirection
-    );
+  trackByLectureId(_index: number, lecture: Lecture): number {
+    return lecture.id;
   }
 
   openAddDialog() {

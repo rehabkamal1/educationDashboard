@@ -1,13 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { LucideAngularModule } from 'lucide-angular';
-import { sortBy, SortDirection } from '../../core/utils/list-sort.util';
 import { forkJoin } from 'rxjs';
 import { Section, Class } from '../../core/models/educational.models';
 import { SectionService } from '../../core/services/section.service';
@@ -16,63 +13,122 @@ import { ToastService } from '../../core/services/toast.service';
 import { SectionDialogComponent } from './section-dialog.component';
 import { SectionEnrollmentDialogComponent } from './section-enrollment-dialog.component';
 
-type SectionSortField = 'name' | 'class' | 'enrolled';
+declare const $: {
+  (selector: string): {
+    length: number;
+    DataTable(options?: object): { destroy(): void };
+  };
+  fn: { DataTable: { isDataTable(el: unknown): boolean } };
+};
 
 @Component({
   selector: 'app-sections',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
     MatButtonModule,
     MatDialogModule,
     MatTooltipModule,
-    MatFormFieldModule,
-    MatSelectModule,
     LucideAngularModule
   ],
   templateUrl: './sections.component.html',
   styleUrls: ['./sections.component.scss']
 })
-export class SectionsComponent implements OnInit {
-  sections: Section[] = [];
-  sortedSections: Section[] = [];
+export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
+  dataSource = new MatTableDataSource<Section>([]);
   classes: Class[] = [];
   isLoading = true;
-  sortField: SectionSortField = 'name';
-  sortDirection: SortDirection = 'asc';
-  readonly sortOptions: { value: SectionSortField; label: string }[] = [
-    { value: 'name', label: 'Section Name' },
-    { value: 'class', label: 'Class' },
-    { value: 'enrolled', label: 'Enrolled Students' }
-  ];
 
   constructor(
     private sectionService: SectionService,
     private classService: ClassService,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadSections();
   }
 
+  ngAfterViewInit(): void {
+    if (!this.isLoading) {
+      this.initDataTable();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroyDataTable();
+  }
+
+  private initDataTable(): void {
+    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
+      return;
+    }
+
+    const table = $('#sectionsTable');
+    if (!table.length || this.dataSource.data.length === 0) {
+      return;
+    }
+
+    try {
+      if ($.fn.DataTable.isDataTable(table)) {
+        table.DataTable().destroy();
+      }
+
+      table.DataTable({
+        pageLength: 10,
+        order: [[1, 'asc']],
+        columnDefs: [{ orderable: false, targets: 4 }],
+        language: {
+          searchPlaceholder: 'Search sections...',
+        },
+      });
+    } catch {
+      // DataTables failed; table still shows Angular-rendered rows
+    }
+  }
+
+  private destroyDataTable(): void {
+    if (typeof $ === 'undefined' || !$.fn?.DataTable) {
+      return;
+    }
+
+    const table = $('#sectionsTable');
+    if (table.length && $.fn.DataTable.isDataTable(table)) {
+      try {
+        table.DataTable().destroy();
+      } catch {
+        // ignore teardown errors on detached tables
+      }
+    }
+  }
+
+  private refreshDataTable(): void {
+    setTimeout(() => {
+      this.initDataTable();
+      this.cdr.detectChanges();
+    });
+  }
+
   loadSections() {
+    this.destroyDataTable();
     this.isLoading = true;
     forkJoin({
       sections: this.sectionService.getAll(),
       classes: this.classService.getAll()
     }).subscribe({
       next: (res) => {
-        this.sections = res.sections;
+        this.dataSource.data = res.sections;
         this.classes = res.classes;
-        this.refreshList();
         this.isLoading = false;
+        this.cdr.detectChanges();
+        this.refreshDataTable();
       },
       error: () => {
         this.toast.error('Failed to load sections and classes.');
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -83,35 +139,19 @@ export class SectionsComponent implements OnInit {
     return cls ? cls.name : '—';
   }
 
-  onSortFieldChange(field: SectionSortField) {
-    this.sortField = field;
-    this.refreshList();
+  getEnrolledCount(section: Section): number {
+    return (section.studentIds || []).length;
   }
 
-  toggleSortDirection() {
-    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.refreshList();
-  }
-
-  get sortDirectionLabel(): string {
-    return this.sortDirection === 'asc' ? 'A → Z' : 'Z → A';
-  }
-
-  private refreshList(): void {
-    this.sortedSections = sortBy(
-      this.sections,
-      (section) => {
-        switch (this.sortField) {
-          case 'class':
-            return this.getClassName(section.classId);
-          case 'enrolled':
-            return (section.studentIds || []).length;
-          default:
-            return section.name;
-        }
-      },
-      this.sortDirection
+  getTotalEnrolled(): number {
+    return this.dataSource.data.reduce(
+      (sum, s) => sum + (s.studentIds || []).length,
+      0
     );
+  }
+
+  trackBySectionId(_index: number, section: Section): number {
+    return section.id;
   }
 
   openAddDialog() {

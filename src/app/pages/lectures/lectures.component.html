@@ -1,4 +1,5 @@
-<div class="lectures-container" *ngIf="!isLoading">
+<div class="lectures-container">
+
   <div class="page-header">
     <div class="header-text">
       <h1>Lectures Management</h1>
@@ -10,79 +11,117 @@
     </button>
   </div>
 
-  <mat-card class="premium-card filter-card">
-    <mat-card-content class="filter-content filter-sort-row">
-      <lucide-icon name="Play" class="search-icon"></lucide-icon>
-      <span class="sort-toolbar-label">Sort lectures</span>
-      <mat-form-field appearance="outline" class="sort-field" subscriptSizing="dynamic">
-        <mat-label>Sort by</mat-label>
-        <mat-select [value]="sortField" (selectionChange)="onSortFieldChange($event.value)">
-          <mat-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button
-        type="button"
-        class="sort-direction-btn"
-        (click)="toggleSortDirection()"
-        [matTooltip]="'Sort direction: ' + sortDirectionLabel">
-        <lucide-icon [name]="sortDirection === 'asc' ? 'ArrowUp' : 'ArrowDown'" class="sort-dir-icon"></lucide-icon>
-        <span>{{ sortDirectionLabel }}</span>
-      </button>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Lectures Grid -->
-  <div class="lectures-grid">
-    <mat-card class="premium-card lecture-card" *ngFor="let lecture of sortedLectures">
-      <mat-card-content class="card-body">
-        
-        <div class="lecture-title">
-          <h3>{{ lecture.title }}</h3>
-        </div>
-        
-        <div class="lecture-info">
-          <div class="info-item">
-            <lucide-icon name="BookOpen" class="info-icon"></lucide-icon>
-            <span class="info-label">Section:</span>
-            <span class="info-value">{{ getSectionName(lecture.sectionId) }}</span>
-          </div>
-          <div class="info-item">
-            <lucide-icon name="Clock" class="info-icon"></lucide-icon>
-            <span class="info-label">Duration:</span>
-            <span class="info-value">{{ lecture.duration }}</span>
-          </div>
-        </div>
-
-      </mat-card-content>
-
-      <div class="card-actions">
-        <button 
-          mat-icon-button 
-          class="action-btn edit" 
-          (click)="openEditDialog(lecture)"
-          matTooltip="Edit Lecture">
-          <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
-        </button>
-        <button 
-          mat-icon-button 
-          class="action-btn delete" 
-          (click)="deleteLecture(lecture.id)"
-          matTooltip="Delete Lecture">
-          <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
-        </button>
+  <div class="stats-row" *ngIf="!isLoading">
+    <div class="stat-pill">
+      <div class="stat-icon lectures">
+        <lucide-icon name="Video"></lucide-icon>
       </div>
-    </mat-card>
+      <div class="stat-copy">
+        <span class="stat-value">{{ dataSource.data.length }}</span>
+        <span class="stat-label">Total Lectures</span>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-icon sections">
+        <lucide-icon name="LayoutGrid"></lucide-icon>
+      </div>
+      <div class="stat-copy">
+        <span class="stat-value">{{ sections.length }}</span>
+        <span class="stat-label">Sections Available</span>
+      </div>
+    </div>
   </div>
 
-  <div *ngIf="sortedLectures.length === 0" class="no-lectures">
-    No lectures available. Create a new lecture to get started.
-  </div>
-</div>
+  <div class="table-container premium-card" [class.is-loading]="isLoading">
 
-<!-- Loading overlay -->
-<div class="loading-state" *ngIf="isLoading">
-  <div class="spinner-container">
-    <div class="premium-spinner"></div>
-    <span>Loading Lectures...</span>
+    <div class="table-card-header" *ngIf="!isLoading">
+      <div class="table-title">
+        <lucide-icon name="Video" class="table-title-icon"></lucide-icon>
+        <div>
+          <h2>Lecture Catalog</h2>
+          <p>Use the search box below to filter • Click column headers to sort</p>
+        </div>
+      </div>
+      <span class="record-count" *ngIf="dataSource.data.length">
+        {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
+      </span>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
+      <table id="lecturesTable" class="display custom-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Section</th>
+            <th>Duration</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let element of dataSource.data; trackBy: trackByLectureId" class="data-row">
+            <td>
+              <span class="id-badge">#{{ element.id }}</span>
+            </td>
+            <td>
+              <div class="lecture-cell">
+                <span class="row-avatar lecture">{{ element.title.charAt(0) }}</span>
+                <span class="font-semibold text-primary">{{ element.title }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="section-chip">
+                <lucide-icon name="LayoutGrid" class="chip-icon"></lucide-icon>
+                {{ getSectionName(element.sectionId) }}
+              </span>
+            </td>
+            <td>
+              <span class="duration-pill">
+                <lucide-icon name="Clock" class="metric-icon"></lucide-icon>
+                {{ element.duration }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  class="action-btn edit"
+                  (click)="openEditDialog(element)"
+                  matTooltip="Edit Lecture">
+                  <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  class="action-btn delete"
+                  (click)="deleteLecture(element.id)"
+                  matTooltip="Delete Lecture">
+                  <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="!isLoading && dataSource.data.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <lucide-icon name="Video"></lucide-icon>
+      </div>
+      <h3>No lectures yet</h3>
+      <p>Create your first lecture and assign it to a section.</p>
+      <button class="gradient-btn" (click)="openAddDialog()">
+        <lucide-icon name="Plus" class="btn-icon"></lucide-icon>
+        Create Lecture
+      </button>
+    </div>
+
+    <div class="loading-state page-loading-overlay" *ngIf="isLoading">
+      <div class="spinner-container">
+        <div class="premium-spinner"></div>
+        <span>Loading Lectures...</span>
+      </div>
+    </div>
   </div>
+
 </div>
