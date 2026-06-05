@@ -50,8 +50,14 @@
 
     <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
       <div class="filter-panel-header">
-        <span class="filter-panel-label">Advanced Filters</span>
-        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+        <div class="filter-header-text">
+          <span class="filter-panel-label">Advanced Filters</span>
+          <span class="filter-panel-hint">
+            Filter by field, then click Apply
+          </span>
+        </div>
+      
+        <div id="classesExportToolbar" class="export-toolbar-slot"></div>
       </div>
       <div class="filter-panel-grid">
         <div class="filter-field">
@@ -76,10 +82,7 @@
       </div>
     </div>
 
-    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
-      <div id="classesExportToolbar" class="export-toolbar-slot"></div>
-      <div id="classesMetaToolbar" class="meta-toolbar-slot"></div>
-    </div>
+      
 
     <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
       <table id="classesTable" class="display custom-table">

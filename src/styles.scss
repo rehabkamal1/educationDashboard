@@ -699,6 +699,25 @@ body.dark-theme {
     background-color: rgba(13, 21, 38, 0.75) !important;
     border-bottom: 1px solid var(--border-color) !important;
   }
+  .filter-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  
+  .filter-header-text {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .export-toolbar-slot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
 }
 
 @import './app/shared/styles/data-list-page';

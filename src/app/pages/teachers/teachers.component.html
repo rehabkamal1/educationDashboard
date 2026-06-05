@@ -49,10 +49,16 @@
     </div>
 
     <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
-      <div class="filter-panel-header">
+    <div class="filter-panel-header">
+      <div class="filter-header-text">
         <span class="filter-panel-label">Advanced Filters</span>
-        <span class="filter-panel-hint">Filter by field, then click Apply</span>
+        <span class="filter-panel-hint">
+          Filter by field, then click Apply
+        </span>
       </div>
+    
+      <div id="teachersExportToolbar" class="export-toolbar-slot"></div>
+    </div>
       <div class="filter-panel-grid">
         <div class="filter-field">
           <label for="teacherFilterId">ID</label>
@@ -82,11 +88,6 @@
           <button type="button" class="btn-filter-reset" (click)="resetTableFilters()">Show All</button>
         </div>
       </div>
-    </div>
-
-    <div class="table-controls-bar" *ngIf="!isLoading && dataSource.data.length > 0">
-      <div id="teachersExportToolbar" class="export-toolbar-slot"></div>
-      <div id="teachersMetaToolbar" class="meta-toolbar-slot"></div>
     </div>
 
     <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
