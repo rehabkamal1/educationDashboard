@@ -189,7 +189,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let element of dataSource.data; trackBy: trackByStudentId" class="data-row">
+          <tr
+            *ngFor="let element of dataSource.data; trackBy: trackByStudentId"
+            class="data-row clickable-row"
+            [attr.data-student-id]="element.id">
             <td>
               <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
             </td>
@@ -197,6 +200,11 @@
               <div class="student-cell">
                 <span class="row-avatar">{{ getInitials(element.name) }}</span>
                 <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
+                <lucide-icon
+                  name="ChevronDown"
+                  class="row-expand-icon"
+                  [class.is-open]="expandedElement?.id === element.id">
+                </lucide-icon>
               </div>
             </td>
             <td>
