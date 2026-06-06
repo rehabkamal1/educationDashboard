@@ -15,6 +15,7 @@ export interface AdvancedDataTableConfig {
   exportFileName: string;
   exportTitle: string;
   hasData: boolean;
+  onDraw?: () => void;
 }
 
 interface DataTableColumnApi {
@@ -200,6 +201,9 @@ export function initAdvancedDataTable(config: AdvancedDataTableConfig): void {
       language: DATATABLE_LANGUAGE,
       title: config.exportTitle,
       filename: config.exportFileName,
+      drawCallback: () => {
+        config.onDraw?.();
+      },
     });
 
     const api = el.DataTable();
