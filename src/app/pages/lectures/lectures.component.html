@@ -17,7 +17,7 @@
         <lucide-icon name="Video"></lucide-icon>
       </div>
       <div class="stat-copy">
-        <span class="stat-value">{{ dataSource.data.length }}</span>
+        <span class="stat-value">{{ recordsTotal }}</span>
         <span class="stat-label">Total Lectures</span>
       </div>
     </div>
@@ -26,7 +26,7 @@
         <lucide-icon name="LayoutGrid"></lucide-icon>
       </div>
       <div class="stat-copy">
-        <span class="stat-value">{{ sections.length }}</span>
+        <span class="stat-value">{{ sectionsCount }}</span>
         <span class="stat-label">Sections Available</span>
       </div>
     </div>
@@ -42,20 +42,17 @@
           <p>Filter by field, export results, sort columns</p>
         </div>
       </div>
-      <span class="record-count" *ngIf="dataSource.data.length">
-        {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
+      <span class="record-count" *ngIf="tableReady && recordsFiltered">
+        {{ recordsFiltered }} record{{ recordsFiltered === 1 ? '' : 's' }}
       </span>
     </div>
 
-    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+    <div class="table-filter-panel" *ngIf="!isLoading">
       <div class="filter-panel-header">
         <div class="filter-header-text">
           <span class="filter-panel-label">Advanced Filters</span>
-          <span class="filter-panel-hint">
-            Filter by field, then click Apply
-          </span>
+          <span class="filter-panel-hint">Filter by field, then click Apply</span>
         </div>
-      
         <div id="lecturesExportToolbar" class="export-toolbar-slot"></div>
       </div>
       <div class="filter-panel-grid">
@@ -85,7 +82,7 @@
       </div>
     </div>
 
-    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
+    <div class="table-wrapper" *ngIf="!isLoading && (!tableReady || recordsTotal > 0)">
       <table id="lecturesTable" class="display custom-table">
         <thead>
           <tr>
@@ -96,53 +93,11 @@
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
-        <tbody>
-          <tr *ngFor="let element of dataSource.data; trackBy: trackByLectureId" class="data-row">
-            <td>
-              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
-            </td>
-            <td>
-              <div class="lecture-cell">
-                <span class="row-avatar lecture">{{ element.title.charAt(0) }}</span>
-                <span class="font-semibold text-primary" [attr.data-export]="element.title">{{ element.title }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="section-chip" [attr.data-export]="getSectionName(element.sectionId)">
-                <lucide-icon name="LayoutGrid" class="chip-icon"></lucide-icon>
-                {{ getSectionName(element.sectionId) }}
-              </span>
-            </td>
-            <td>
-              <span class="duration-pill" [attr.data-export]="element.duration">
-                <lucide-icon name="Clock" class="metric-icon"></lucide-icon>
-                {{ element.duration }}
-              </span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                <button
-                  mat-icon-button
-                  class="action-btn edit"
-                  (click)="openEditDialog(element)"
-                  matTooltip="Edit Lecture">
-                  <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
-                </button>
-                <button
-                  mat-icon-button
-                  class="action-btn delete"
-                  (click)="deleteLecture(element.id)"
-                  matTooltip="Delete Lecture">
-                  <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
 
-    <div *ngIf="!isLoading && dataSource.data.length === 0" class="empty-state">
+    <div *ngIf="!isLoading && tableReady && recordsTotal === 0" class="empty-state">
       <div class="empty-icon">
         <lucide-icon name="Video"></lucide-icon>
       </div>

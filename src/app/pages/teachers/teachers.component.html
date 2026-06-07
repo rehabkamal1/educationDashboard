@@ -12,13 +12,13 @@
     </button>
   </div>
 
-  <div class="stats-row" *ngIf="!isLoading">
+  <div class="stats-row" *ngIf="tableReady">
     <div class="stat-pill">
       <div class="stat-icon teachers">
         <lucide-icon name="GraduationCap"></lucide-icon>
       </div>
       <div class="stat-copy">
-        <span class="stat-value">{{ dataSource.data.length }}</span>
+        <span class="stat-value">{{ recordsTotal }}</span>
         <span class="stat-label">Total Faculty</span>
       </div>
     </div>
@@ -33,9 +33,9 @@
     </div>
   </div>
 
-  <div class="table-container premium-card" [class.is-loading]="isLoading">
+  <div class="table-container premium-card">
 
-    <div class="table-card-header" *ngIf="!isLoading">
+    <div class="table-card-header" *ngIf="tableReady">
       <div class="table-title">
         <lucide-icon name="GraduationCap" class="table-title-icon"></lucide-icon>
         <div>
@@ -43,22 +43,19 @@
           <p>Filter by field, export results, sort columns</p>
         </div>
       </div>
-      <span class="record-count" *ngIf="dataSource.data.length">
-        {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
+      <span class="record-count" *ngIf="recordsFiltered">
+        {{ recordsFiltered }} record{{ recordsFiltered === 1 ? '' : 's' }}
       </span>
     </div>
 
-    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
-    <div class="filter-panel-header">
-      <div class="filter-header-text">
-        <span class="filter-panel-label">Advanced Filters</span>
-        <span class="filter-panel-hint">
-          Filter by field, then click Apply
-        </span>
+    <div class="table-filter-panel">
+      <div class="filter-panel-header">
+        <div class="filter-header-text">
+          <span class="filter-panel-label">Advanced Filters</span>
+          <span class="filter-panel-hint">Filter by field, then click Apply</span>
+        </div>
+        <div id="teachersExportToolbar" class="export-toolbar-slot"></div>
       </div>
-    
-      <div id="teachersExportToolbar" class="export-toolbar-slot"></div>
-    </div>
       <div class="filter-panel-grid">
         <div class="filter-field">
           <label for="teacherFilterId">ID</label>
@@ -90,7 +87,7 @@
       </div>
     </div>
 
-    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
+    <div class="table-wrapper" *ngIf="!tableReady || recordsTotal > 0">
       <table id="teachersTable" class="display custom-table">
         <thead>
           <tr>
@@ -102,58 +99,11 @@
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
-        <tbody>
-          <tr *ngFor="let element of dataSource.data; trackBy: trackByTeacherId" class="data-row">
-            <td>
-              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
-            </td>
-            <td>
-              <div class="teacher-cell">
-                <span class="row-avatar teacher">{{ getInitials(element.name) }}</span>
-                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="specialization-chip" [attr.data-export]="element.specialization">
-                {{ element.specialization }}
-              </span>
-            </td>
-            <td>
-              <span class="contact-line">
-                <lucide-icon name="Mail" class="contact-icon"></lucide-icon>
-                <span [attr.data-export]="element.email">{{ element.email }}</span>
-              </span>
-            </td>
-            <td>
-              <span class="contact-line">
-                <lucide-icon name="Phone" class="contact-icon"></lucide-icon>
-                <span [attr.data-export]="element.phone">{{ element.phone }}</span>
-              </span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                <button
-                  mat-icon-button
-                  class="action-btn edit"
-                  (click)="openEditDialog(element)"
-                  matTooltip="Edit Teacher">
-                  <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
-                </button>
-                <button
-                  mat-icon-button
-                  class="action-btn delete"
-                  (click)="deleteTeacher(element.id)"
-                  matTooltip="Delete Teacher">
-                  <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
 
-    <div *ngIf="!isLoading && dataSource.data.length === 0" class="empty-state">
+    <div *ngIf="tableReady && recordsTotal === 0" class="empty-state">
       <div class="empty-icon">
         <lucide-icon name="GraduationCap"></lucide-icon>
       </div>
@@ -163,13 +113,6 @@
         <lucide-icon name="GraduationCap" class="btn-icon"></lucide-icon>
         Onboard Teacher
       </button>
-    </div>
-
-    <div class="loading-state page-loading-overlay" *ngIf="isLoading">
-      <div class="spinner-container">
-        <div class="premium-spinner"></div>
-        <span>Retrieving Faculty Registry...</span>
-      </div>
     </div>
   </div>
 
