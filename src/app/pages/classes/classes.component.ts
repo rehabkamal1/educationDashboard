@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 
-import { Class, Teacher } from '../../core/models/educational.models';
+import { Class, Section, Teacher } from '../../core/models/educational.models';
 import { ClassService } from '../../core/services/class.service';
 import { TeacherService } from '../../core/services/teacher.service';
+import { SectionService } from '../../core/services/section.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ClassDialogComponent } from './class-dialog.component';
 import {
@@ -14,7 +15,17 @@ import {
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { renderClassRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderClassRow, renderIdBadge } from '../../core/utils/datatable-cell-render.util';
+import {
+  buildDetailRowHtml,
+  buildDetailSection,
+  buildExpandColumn,
+  buildSubTable,
+  handleExpandClick,
+  insertDetailRow,
+  removeDetailRows,
+  syncExpandedHighlight,
+} from '../../core/utils/datatable-row-expand.util';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -34,6 +45,8 @@ export class ClassesComponent implements OnInit, OnDestroy {
   private rowCache = new Map<string, Record<string, unknown>>();
 
   teachers: Teacher[] = [];
+  sections: Section[] = [];
+  expandedId: string | null = null;
   isLoading = true;
   tableReady = false;
   recordsTotal = 0;
@@ -49,6 +62,7 @@ export class ClassesComponent implements OnInit, OnDestroy {
   constructor(
     private classService: ClassService,
     private teacherService: TeacherService,
+    private sectionService: SectionService,
     private toast: ToastService,
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef
@@ -78,6 +92,7 @@ export class ClassesComponent implements OnInit, OnDestroy {
       { data: 'name', render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderClassRow(row)[1] },
       { data: 'teacherName', render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderClassRow(row)[2] },
       { data: null, orderable: false, render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderClassRow(row)[3] },
+      buildExpandColumn(() => this.expandedId),
     ];
   }
 
@@ -90,7 +105,7 @@ export class ClassesComponent implements OnInit, OnDestroy {
       columns: this.buildColumns(),
       pageLength: 10,
       order: [[0, 'asc']],
-      nonOrderableTargets: [3],
+      nonOrderableTargets: [3, 4],
       exportFileName: 'classes',
       exportTitle: 'Classes',
       customVars: () => ({
@@ -107,8 +122,10 @@ export class ClassesComponent implements OnInit, OnDestroy {
       },
       rowCallback: (row, data) => {
         row.classList.add('data-row');
+        row.setAttribute('data-row-id', String(data['id'] ?? ''));
         this.rowCache.set(String(data['id'] ?? ''), data);
       },
+      onDraw: () => this.renderExpandedDetail(),
     });
     this.attachTableListeners();
   }
@@ -125,6 +142,10 @@ export class ClassesComponent implements OnInit, OnDestroy {
   }
 
   private handleTableClick = (event: Event): void => {
+    if (handleExpandClick(event, this.expandedId, (id) => this.toggleExpand(id))) {
+      return;
+    }
+
     const btn = (event.target as HTMLElement).closest('[data-dt-action]') as HTMLElement | null;
     if (!btn) {
       return;
@@ -152,6 +173,43 @@ export class ClassesComponent implements OnInit, OnDestroy {
     };
   }
 
+  private renderExpandedDetail(): void {
+    syncExpandedHighlight(this.tableSelector, this.expandedId, 'data-row-id');
+    if (!this.expandedId) {
+      removeDetailRows(this.tableSelector);
+      return;
+    }
+    const rowData = this.rowCache.get(this.expandedId);
+    if (!rowData) {
+      return;
+    }
+    insertDetailRow(
+      this.tableSelector,
+      this.expandedId,
+      'data-row-id',
+      this.buildClassDetailHtml(this.toClass(rowData))
+    );
+  }
+
+  private buildClassDetailHtml(cls: Class): string {
+    const classSections = this.sections.filter((s) => s.classId === cls.id);
+    const rows = classSections.map((section) => [
+      renderIdBadge(section.id),
+      escapeHtml(section.name),
+      String((section.studentIds ?? []).length),
+    ]);
+    const content = buildDetailSection(
+      'Class Sections (from sections table)',
+      buildSubTable(['Section ID', 'Section Name', 'Enrolled Students'], rows)
+    );
+    return buildDetailRowHtml(5, content);
+  }
+
+  private toggleExpand(id: string): void {
+    this.expandedId = this.expandedId === id ? null : id;
+    redrawServerSideTable(this.tableSelector, false);
+  }
+
   private refreshDataTable(): void {
     destroyAdvancedDataTable(this.tableSelector);
     setTimeout(() => {
@@ -166,9 +224,20 @@ export class ClassesComponent implements OnInit, OnDestroy {
     this.teacherService.getAll().subscribe({
       next: (teachers) => {
         this.teachers = teachers;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-        this.refreshDataTable();
+        this.sectionService.getAll().subscribe({
+          next: (sections) => {
+            this.sections = sections;
+            this.expandedId = null;
+            this.isLoading = false;
+            this.cdr.detectChanges();
+            this.refreshDataTable();
+          },
+          error: () => {
+            this.toast.error('Failed to load class sections.');
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          },
+        });
       },
       error: () => {
         this.toast.error('Failed to load classes.');
@@ -179,6 +248,7 @@ export class ClassesComponent implements OnInit, OnDestroy {
   }
 
   reloadTable(): void {
+    this.expandedId = null;
     redrawServerSideTable(this.tableSelector, false);
   }
 

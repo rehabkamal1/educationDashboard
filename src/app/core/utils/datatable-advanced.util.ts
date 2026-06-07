@@ -75,7 +75,7 @@ declare const $: {
 };
 
 const EXPORT_OPTIONS = {
-  columns: ':visible:not(.col-actions)',
+  columns: ':visible:not(.col-actions):not(.col-expand)',
   format: {
     body: (_data: unknown, _row: number, _col: number, node: HTMLElement) => {
       const exportEl =
@@ -102,7 +102,7 @@ const EXPORT_BUTTONS = [
       { extend: 'csv', text: 'Export CSV', exportOptions: EXPORT_OPTIONS },
       { extend: 'pdf', text: 'Export PDF', exportOptions: EXPORT_OPTIONS },
       { extend: 'print', text: 'Print Table', exportOptions: EXPORT_OPTIONS },
-      { extend: 'colvis', text: 'Show / Hide Columns', columns: ':not(.col-actions)' },
+      { extend: 'colvis', text: 'Show / Hide Columns', columns: ':not(.col-actions):not(.col-expand)' },
     ],
   },
 ];

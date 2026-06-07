@@ -23,7 +23,7 @@ export function renderIdBadge(id: string | number): string {
   return `<span class="id-badge" data-export="#${escapeHtml(String(id))}">#${escapeHtml(String(id))}</span>`;
 }
 
-export function renderStudentRow(row: Record<string, unknown>, expandedId: string | null): string[] {
+export function renderStudentRow(row: Record<string, unknown>): string[] {
   const id = String(row['id'] ?? '');
   const name = String(row['name'] ?? '');
   const email = String(row['email'] ?? '');
@@ -33,15 +33,13 @@ export function renderStudentRow(row: Record<string, unknown>, expandedId: strin
   const classNamesText = String(row['classNamesText'] ?? 'None enrolled');
   const sectionsCount = Number(row['sectionsCount'] ?? 0);
   const lecturesCount = Number(row['lecturesCount'] ?? 0);
-  const isExpanded = expandedId === id;
-
   const classesHtml = classNames.length
     ? `<div class="chip-list" data-export="${escapeHtml(classNamesText)}">${classNames.map((n) => `<span class="class-chip">${escapeHtml(n)}</span>`).join('')}</div>`
     : `<span class="text-muted" data-export="None enrolled">None enrolled</span>`;
 
   return [
     renderIdBadge(id),
-    `<div class="student-cell"><span class="row-avatar">${escapeHtml(getInitials(name))}</span><span class="font-semibold text-primary" data-export="${escapeHtml(name)}">${escapeHtml(name)}</span><span class="row-expand-icon${isExpanded ? ' is-open' : ''}">▾</span></div>`,
+    `<div class="student-cell"><span class="row-avatar">${escapeHtml(getInitials(name))}</span><span class="font-semibold text-primary" data-export="${escapeHtml(name)}">${escapeHtml(name)}</span></div>`,
     `<div class="contact-stack" data-export="${escapeHtml(email)} | ${escapeHtml(phone)}"><span class="contact-line">✉ ${escapeHtml(email)}</span><span class="contact-line">☎ ${escapeHtml(phone)}</span></div>`,
     `<span class="status-badge ${escapeHtml(status.toLowerCase())}" data-export="${escapeHtml(status)}">${escapeHtml(status)}</span>`,
     classesHtml,
