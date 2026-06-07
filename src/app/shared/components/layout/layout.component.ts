@@ -9,21 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Subject, takeUntil } from 'rxjs';
-import {
-  LucideAngularModule,
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  BookOpen,
-  Grid,
-  Play,
-  Moon,
-  Sun,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  LogOut
-} from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../core/services/theme.service';
 import { LoadingService } from '../../../core/services/loading.service';
 

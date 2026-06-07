@@ -1,9 +1,7 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 
 import { Teacher } from '../../core/models/educational.models';
@@ -26,19 +24,15 @@ const API_BASE = 'http://localhost:3000';
   imports: [
     CommonModule,
     FormsModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatTooltipModule,
     LucideAngularModule,
   ],
   templateUrl: './teachers.component.html',
 })
-export class TeachersComponent implements OnInit, AfterViewInit, OnDestroy {
+export class TeachersComponent implements AfterViewInit, OnDestroy {
   private readonly tableSelector = '#teachersTable';
   private tableWrapperEl: HTMLElement | null = null;
   private rowCache = new Map<string, Record<string, unknown>>();
 
-  isLoading = true;
   tableReady = false;
   recordsTotal = 0;
   recordsFiltered = 0;
@@ -58,10 +52,6 @@ export class TeachersComponent implements OnInit, AfterViewInit, OnDestroy {
     private dialog: MatDialog,
     private cdr: ChangeDetectorRef
   ) {}
-
-  ngOnInit(): void {
-    this.isLoading = false;
-  }
 
   ngAfterViewInit(): void {
     this.initDataTable();
@@ -145,7 +135,7 @@ export class TeachersComponent implements OnInit, AfterViewInit, OnDestroy {
     event.stopPropagation();
     const action = btn.getAttribute('data-dt-action');
     const id = btn.getAttribute('data-dt-id') ?? '';
-    const rowData = this.rowCache.get(id) ?? this.getRowDataFromTable(id);
+    const rowData = this.rowCache.get(id);
     if (!rowData) {
       return;
     }
@@ -156,20 +146,6 @@ export class TeachersComponent implements OnInit, AfterViewInit, OnDestroy {
       this.deleteTeacher(teacher.id);
     }
   };
-
-  private getRowDataFromTable(id: string): Record<string, unknown> | null {
-    const api = getTableApi(this.tableSelector);
-    if (!api) {
-      return null;
-    }
-    let found: Record<string, unknown> | null = null;
-    document.querySelectorAll(`${this.tableSelector} tbody tr`).forEach((rowEl) => {
-      if (this.rowCache.has(id)) {
-        found = this.rowCache.get(id) ?? null;
-      }
-    });
-    return found;
-  }
 
   private toTeacher(row: Record<string, unknown>): Teacher {
     return {

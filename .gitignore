@@ -37,6 +37,12 @@ yarn-error.log
 testem.log
 /typings
 
+
+run.txt
+DATATABLES_SUMMARY.md
+
+
 # System files
 .DS_Store
 Thumbs.db
+
