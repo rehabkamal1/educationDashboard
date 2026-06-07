@@ -1,7 +1,12 @@
 // Custom middleware for json-server to ensure numeric IDs when appropriate
-const fs = require('fs');
+const { handleDataTableRequest } = require('./datatable-server');
 
 module.exports = (req, res, next) => {
+  if (req.path.startsWith('/datatable/')) {
+    handleDataTableRequest(req, res);
+    return;
+  }
+
   // Intercept POST responses and convert ID-like strings to numbers
   if (req.method === 'POST') {
     const originalSend = res.send;

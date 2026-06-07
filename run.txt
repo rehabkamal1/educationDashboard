@@ -1,9 +1,11 @@
 # في مجلد المشروع
 
-# تشغيل JSON Server مع middleware لضمان IDs رقمية
 npx json-server --watch db.json --port 3000
 
-# أو باستخدام middleware مخصص
+# تشغيل JSON Server مع middleware (مطلوب لـ DataTables server-side)
+npm run api
+
+# أو
 npx json-server --watch db.json --port 3000 --middlewares middleware.js
 
 # تشغيل تطبيق Angular (في terminal منفصل)

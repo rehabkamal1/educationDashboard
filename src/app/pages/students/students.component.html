@@ -19,7 +19,7 @@
           <lucide-icon name="Users"></lucide-icon>
         </div>
         <div class="stat-copy">
-          <span class="stat-value">{{ dataSource.data.length }}</span>
+          <span class="stat-value">{{ recordsTotal }}</span>
           <span class="stat-label">Total Students</span>
         </div>
       </div>
@@ -28,7 +28,7 @@
           <lucide-icon name="UserCheck"></lucide-icon>
         </div>
         <div class="stat-copy">
-          <span class="stat-value">{{ getActiveCount() }}</span>
+          <span class="stat-value">{{ activeCount }}</span>
           <span class="stat-label">Active</span>
         </div>
       </div>
@@ -37,7 +37,7 @@
           <lucide-icon name="UserX"></lucide-icon>
         </div>
         <div class="stat-copy">
-          <span class="stat-value">{{ getInactiveCount() }}</span>
+          <span class="stat-value">{{ inactiveCount }}</span>
           <span class="stat-label">Inactive</span>
         </div>
       </div>
@@ -54,12 +54,12 @@
           <p>Filter by field, export results, sort columns</p>
         </div>
       </div>
-      <span class="record-count" *ngIf="dataSource.data.length">
-        {{ dataSource.data.length }} record{{ dataSource.data.length === 1 ? '' : 's' }}
+      <span class="record-count" *ngIf="tableReady && recordsFiltered">
+        {{ recordsFiltered }} record{{ recordsFiltered === 1 ? '' : 's' }}
       </span>
     </div>
 
-    <div class="table-filter-panel" *ngIf="!isLoading && dataSource.data.length > 0">
+    <div class="table-filter-panel" *ngIf="!isLoading">
 
       <div class="filter-panel-header">
         <div class="filter-header-text">
@@ -174,7 +174,7 @@
       <div id="studentsMetaToolbar" class="meta-toolbar-slot"></div>
     </div> -->
 
-    <div class="table-wrapper" *ngIf="!isLoading && dataSource.data.length > 0">
+    <div class="table-wrapper" *ngIf="!isLoading && (!tableReady || recordsTotal > 0)">
       <table id="studentsTable" class="display custom-table">
         <thead>
           <tr>
@@ -188,88 +188,11 @@
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
-        <tbody>
-          <tr
-            *ngFor="let element of dataSource.data; trackBy: trackByStudentId"
-            class="data-row clickable-row"
-            [attr.data-student-id]="element.id">
-            <td>
-              <span class="id-badge" [attr.data-export]="'#' + element.id">#{{ element.id }}</span>
-            </td>
-            <td>
-              <div class="student-cell">
-                <span class="row-avatar">{{ getInitials(element.name) }}</span>
-                <span class="font-semibold text-primary" [attr.data-export]="element.name">{{ element.name }}</span>
-                <lucide-icon
-                  name="ChevronDown"
-                  class="row-expand-icon"
-                  [class.is-open]="expandedElement?.id === element.id">
-                </lucide-icon>
-              </div>
-            </td>
-            <td>
-              <div class="contact-stack" [attr.data-export]="getStudentContactExport(element)">
-                <span class="contact-line">
-                  <lucide-icon name="Mail" class="contact-icon"></lucide-icon>
-                  {{ element.email }}
-                </span>
-                <span class="contact-line">
-                  <lucide-icon name="Phone" class="contact-icon"></lucide-icon>
-                  {{ element.phone }}
-                </span>
-              </div>
-            </td>
-            <td>
-              <span class="status-badge" [ngClass]="element.status.toLowerCase()" [attr.data-export]="element.status">
-                {{ element.status }}
-              </span>
-            </td>
-            <td>
-              <div class="chip-list" *ngIf="getStudentClassNames(element.id).length; else noClasses" [attr.data-export]="getStudentClassNamesText(element.id)">
-                <span class="class-chip" *ngFor="let name of getStudentClassNames(element.id)">
-                  {{ name }}
-                </span>
-              </div>
-              <ng-template #noClasses>
-                <span class="text-muted" [attr.data-export]="'None enrolled'">None enrolled</span>
-              </ng-template>
-            </td>
-            <td>
-              <span class="metric-pill" [attr.data-export]="getStudentSections(element.id).length">
-                <lucide-icon name="Layers" class="metric-icon"></lucide-icon>
-                {{ getStudentSections(element.id).length }}
-              </span>
-            </td>
-            <td>
-              <span class="metric-pill lectures" [attr.data-export]="getStudentLecturesCount(element.id)">
-                <lucide-icon name="Video" class="metric-icon"></lucide-icon>
-                {{ getStudentLecturesCount(element.id) }}
-              </span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                <button
-                  mat-icon-button
-                  class="action-btn edit"
-                  (click)="openEditDialog(element, $event)"
-                  matTooltip="Edit Student">
-                  <lucide-icon name="Pencil" class="action-svg"></lucide-icon>
-                </button>
-                <button
-                  mat-icon-button
-                  class="action-btn delete"
-                  (click)="deleteStudent(element.id, $event)"
-                  matTooltip="Delete Student">
-                  <lucide-icon name="Trash2" class="action-svg"></lucide-icon>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
 
-    <div *ngIf="!isLoading && dataSource.data.length === 0" class="empty-state">
+    <div *ngIf="!isLoading && tableReady && recordsTotal === 0" class="empty-state">
       <div class="empty-icon">
         <lucide-icon name="Users"></lucide-icon>
       </div>

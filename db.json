@@ -71,13 +71,36 @@
       "status": "Active",
       "creationDate": "2026-06-06",
       "id": "DVE_Rsa"
+    },
+    {
+      "name": "maka mhmd",
+      "email": "makamhmd@gmail.com",
+      "phone": "123456",
+      "status": "Active",
+      "creationDate": "2026-06-06",
+      "id": "N_FdUkE"
+    },
+    {
+      "name": "safe s",
+      "email": "safe@gmail.com",
+      "phone": "1234",
+      "status": "Inactive",
+      "id": "q9LIRpH"
+    },
+    {
+      "name": "mahmoud",
+      "email": "mahmoud@gmail.com",
+      "phone": "123456",
+      "status": "Active",
+      "creationDate": "2026-06-06",
+      "id": "Ry786V-"
     }
   ],
   "teachers": [
     {
       "name": "Prof. Emma Ston",
       "specialization": "Mathematics",
-      "email": "e.stone@university.edu",
+      "email": "e.stone@university.com",
       "phone": "+1 (555) 002-2222",
       "id": "2"
     },
@@ -101,6 +124,13 @@
       "email": "teacher1@gmail.com",
       "phone": "+2012345678",
       "id": "Wdl8B3kOzE8"
+    },
+    {
+      "name": "teacher3",
+      "specialization": "tea",
+      "email": "teacher2@gamil.com",
+      "phone": "12345678",
+      "id": "8odrt0o"
     }
   ],
   "classes": [
@@ -139,7 +169,8 @@
         2,
         4,
         5,
-        3
+        3,
+        7
       ]
     },
     {
@@ -169,7 +200,8 @@
       "classId": "xzABpoq57qI",
       "id": "vZnkGSr8HJA",
       "studentIds": [
-        "U2adbsN0w6c"
+        "U2adbsN0w6c",
+        5
       ]
     }
   ],

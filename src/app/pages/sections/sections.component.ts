@@ -1,24 +1,24 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LucideAngularModule } from 'lucide-angular';
-import { forkJoin } from 'rxjs';
-import { Section, Class } from '../../core/models/educational.models';
+import { Class, Section } from '../../core/models/educational.models';
 import { SectionService } from '../../core/services/section.service';
 import { ClassService } from '../../core/services/class.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SectionDialogComponent } from './section-dialog.component';
 import { SectionEnrollmentDialogComponent } from './section-enrollment-dialog.component';
 import {
-  applyColumnFilters,
-  clearColumnFilters,
   destroyAdvancedDataTable,
-  initAdvancedDataTable,
+  initServerSideDataTable,
+  redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
+import { renderSectionRow } from '../../core/utils/datatable-cell-render.util';
+
+const API_BASE = 'http://localhost:3000';
 
 @Component({
   selector: 'app-sections',
@@ -35,11 +35,16 @@ import {
 })
 export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly tableSelector = '#sectionsTable';
-  private readonly columnCount = 5;
+  private tableWrapperEl: HTMLElement | null = null;
+  private rowCache = new Map<string, Record<string, unknown>>();
 
-  dataSource = new MatTableDataSource<Section>([]);
   classes: Class[] = [];
   isLoading = true;
+  tableReady = false;
+  recordsTotal = 0;
+  recordsFiltered = 0;
+  totalEnrolled = 0;
+  classesCount = 0;
 
   filters = {
     id: '',
@@ -57,7 +62,7 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.loadSections();
+    this.loadMetadata();
   }
 
   ngAfterViewInit(): void {
@@ -67,54 +72,119 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.detachTableListeners();
     destroyAdvancedDataTable(this.tableSelector);
   }
 
   applyTableFilters(): void {
-    applyColumnFilters(this.tableSelector, [
-      { columnIndex: 0, value: this.filters.id },
-      { columnIndex: 1, value: this.filters.name },
-      { columnIndex: 2, value: this.filters.className },
-      { columnIndex: 3, value: this.filters.enrolled },
-    ]);
+    redrawServerSideTable(this.tableSelector, true);
   }
 
   resetTableFilters(): void {
     this.filters = { id: '', name: '', className: '', enrolled: '' };
-    clearColumnFilters(this.tableSelector, this.columnCount);
+    redrawServerSideTable(this.tableSelector, true);
+  }
+
+  private buildColumns(): object[] {
+    return [
+      { data: 'id', render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderSectionRow(row)[0] },
+      { data: 'name', render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderSectionRow(row)[1] },
+      { data: 'className', render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderSectionRow(row)[2] },
+      { data: 'enrolledCount', render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderSectionRow(row)[3] },
+      { data: null, orderable: false, render: (_d: unknown, _t: string, row: Record<string, unknown>) => renderSectionRow(row)[4] },
+    ];
   }
 
   private initDataTable(): void {
-    initAdvancedDataTable({
+    initServerSideDataTable({
       selector: this.tableSelector,
+      ajaxUrl: `${API_BASE}/datatable/sections`,
       exportToolbarSelector: '#sectionsExportToolbar',
       metaToolbarSelector: '#sectionsMetaToolbar',
+      columns: this.buildColumns(),
       pageLength: 10,
       order: [[1, 'asc']],
       nonOrderableTargets: [4],
       exportFileName: 'sections',
       exportTitle: 'Sections',
-      hasData: this.dataSource.data.length > 0,
+      customVars: () => ({
+        idFilter: this.filters.id,
+        nameFilter: this.filters.name,
+        classNameFilter: this.filters.className,
+        enrolledFilter: this.filters.enrolled,
+      }),
+      onLoaded: (meta) => {
+        this.recordsTotal = meta.recordsTotal;
+        this.recordsFiltered = meta.recordsFiltered;
+        this.totalEnrolled = meta.stats?.totalEnrolled ?? 0;
+        this.classesCount = meta.stats?.classes ?? this.classes.length;
+        this.tableReady = true;
+        this.cdr.detectChanges();
+      },
+      rowCallback: (row, data) => {
+        row.classList.add('data-row');
+        this.rowCache.set(String(data['id'] ?? ''), data);
+      },
     });
+    this.attachTableListeners();
+  }
+
+  private attachTableListeners(): void {
+    this.detachTableListeners();
+    this.tableWrapperEl = document.querySelector(`${this.tableSelector}`)?.closest('.table-wrapper') ?? null;
+    this.tableWrapperEl?.addEventListener('click', this.handleTableClick);
+  }
+
+  private detachTableListeners(): void {
+    this.tableWrapperEl?.removeEventListener('click', this.handleTableClick);
+    this.tableWrapperEl = null;
+  }
+
+  private handleTableClick = (event: Event): void => {
+    const btn = (event.target as HTMLElement).closest('[data-dt-action]') as HTMLElement | null;
+    if (!btn) {
+      return;
+    }
+    event.stopPropagation();
+    const action = btn.getAttribute('data-dt-action');
+    const id = btn.getAttribute('data-dt-id') ?? '';
+    const rowData = this.rowCache.get(id);
+    if (!rowData) {
+      return;
+    }
+    const section = this.toSection(rowData);
+    if (action === 'enroll') {
+      this.openEnrollmentDialog(section);
+    } else if (action === 'edit') {
+      this.openEditDialog(section);
+    } else if (action === 'delete') {
+      this.deleteSection(section.id);
+    }
+  };
+
+  private toSection(row: Record<string, unknown>): Section {
+    return {
+      id: row['id'] as Section['id'],
+      name: String(row['name'] ?? ''),
+      classId: row['classId'] as number,
+      studentIds: (row['studentIds'] as number[]) ?? [],
+    };
   }
 
   private refreshDataTable(): void {
+    destroyAdvancedDataTable(this.tableSelector);
     setTimeout(() => {
       this.initDataTable();
       this.cdr.detectChanges();
     });
   }
 
-  loadSections() {
+  loadMetadata() {
     destroyAdvancedDataTable(this.tableSelector);
     this.isLoading = true;
-    forkJoin({
-      sections: this.sectionService.getAll(),
-      classes: this.classService.getAll()
-    }).subscribe({
-      next: (res) => {
-        this.dataSource.data = res.sections;
-        this.classes = res.classes;
+    this.classService.getAll().subscribe({
+      next: (classes) => {
+        this.classes = classes;
         this.isLoading = false;
         this.cdr.detectChanges();
         this.refreshDataTable();
@@ -127,25 +197,8 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  getClassName(classId: number): string {
-    const cid = String(classId);
-    const cls = this.classes.find(c => String(c.id) === cid);
-    return cls ? cls.name : '—';
-  }
-
-  getEnrolledCount(section: Section): number {
-    return (section.studentIds || []).length;
-  }
-
-  getTotalEnrolled(): number {
-    return this.dataSource.data.reduce(
-      (sum, s) => sum + (s.studentIds || []).length,
-      0
-    );
-  }
-
-  trackBySectionId(_index: number, section: Section): number {
-    return section.id;
+  reloadTable(): void {
+    redrawServerSideTable(this.tableSelector, false);
   }
 
   openAddDialog() {
@@ -158,7 +211,7 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
         this.sectionService.create(result).subscribe({
           next: () => {
             this.toast.success('Section created.');
-            this.loadSections();
+            this.reloadTable();
           },
           error: () => this.toast.error('Create failed.')
         });
@@ -176,7 +229,7 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
         this.sectionService.update(section.id, result).subscribe({
           next: () => {
             this.toast.success('Section updated.');
-            this.loadSections();
+            this.reloadTable();
           },
           error: () => this.toast.error('Update failed.')
         });
@@ -190,16 +243,16 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
       data: { section }
     });
     dialogRef.afterClosed().subscribe(() => {
-      this.loadSections();
+      this.reloadTable();
     });
   }
 
-  deleteSection(id: number) {
+  deleteSection(id: number | string) {
     if (confirm('Are you sure you want to delete this section?')) {
-      this.sectionService.delete(id).subscribe({
+      this.sectionService.delete(id as number).subscribe({
         next: () => {
           this.toast.success('Section deleted.');
-          this.loadSections();
+          this.reloadTable();
         },
         error: () => this.toast.error('Delete failed.')
       });

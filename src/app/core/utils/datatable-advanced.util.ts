@@ -1,21 +1,38 @@
 export interface ColumnFilterSpec {
   columnIndex: number;
   value: string;
-  /** Use smart search (space-separated terms must all match). */
   smart?: boolean;
 }
 
-export interface AdvancedDataTableConfig {
+export interface DataTableStats {
+  total?: number;
+  active?: number;
+  inactive?: number;
+  specializations?: string[];
+  teachers?: number;
+  totalEnrolled?: number;
+  classes?: number;
+  sections?: number;
+}
+
+export interface ServerSideDataTableConfig {
   selector: string;
+  ajaxUrl: string;
   exportToolbarSelector: string;
   metaToolbarSelector: string;
+  columns: object[];
   pageLength?: number;
   order?: [number, 'asc' | 'desc'][];
   nonOrderableTargets?: number[];
   exportFileName: string;
   exportTitle: string;
-  hasData: boolean;
+  /** Attach custom HTTP variables on each ajax request (DataTables custom_vars pattern). */
+  customVars?: () => Record<string, string>;
   onDraw?: () => void;
+  onLoaded?: (meta: { recordsTotal: number; recordsFiltered: number; stats?: DataTableStats }) => void;
+  /** Called with full server row objects before DataTables maps columns (keeps extra fields like creationDate). */
+  onRowsReceived?: (rows: Record<string, unknown>[]) => void;
+  rowCallback?: (row: HTMLElement, data: Record<string, unknown>) => void;
 }
 
 interface DataTableColumnApi {
@@ -23,11 +40,12 @@ interface DataTableColumnApi {
   clear(): { search(): DataTableColumnApi };
 }
 
-interface DataTableApi {
+export interface DataTableApi {
   destroy(): void;
   column(index: number): DataTableColumnApi;
   search(value?: string): DataTableApi;
-  draw(): void;
+  draw(resetPaging?: boolean): void;
+  row(node: HTMLElement): { data(): Record<string, unknown> };
 }
 
 interface DataTableButtonsInstance {
@@ -90,13 +108,15 @@ const EXPORT_BUTTONS = [
 ];
 
 const DATATABLE_LANGUAGE = {
+  processing: 'Loading...',
   search: 'Quick search:',
-  searchPlaceholder: 'Search visible rows...',
+  searchPlaceholder: 'Search server data...',
   lengthMenu: 'Show _MENU_ entries',
   info: 'Showing _START_ to _END_ of _TOTAL_ entries',
   infoEmpty: 'No entries to show',
   infoFiltered: '(filtered from _MAX_ total entries)',
   zeroRecords: 'No matching records found',
+  emptyTable: 'No data available',
   paginate: {
     first: 'First',
     last: 'Last',
@@ -105,7 +125,7 @@ const DATATABLE_LANGUAGE = {
   },
 };
 
-function getTableApi(selector: string): DataTableApi | null {
+export function getTableApi(selector: string): DataTableApi | null {
   if (typeof $ === 'undefined' || !$.fn?.DataTable) {
     return null;
   }
@@ -118,7 +138,7 @@ function getTableApi(selector: string): DataTableApi | null {
   return el.DataTable();
 }
 
-function mountTableControls(config: AdvancedDataTableConfig, api: DataTableApi): void {
+function mountTableControls(config: ServerSideDataTableConfig, api: DataTableApi): void {
   const ButtonsCtor = $.fn.DataTable.Buttons;
   const exportSlot = $(config.exportToolbarSelector);
   const metaSlot = $(config.metaToolbarSelector);
@@ -163,18 +183,14 @@ export function destroyAdvancedDataTable(selector: string): void {
   }
 }
 
-export function initAdvancedDataTable(config: AdvancedDataTableConfig): void {
-  if (!config.hasData) {
-    return;
-  }
-
+export function initServerSideDataTable(config: ServerSideDataTableConfig): DataTableApi | null {
   if (typeof $ === 'undefined' || !$.fn?.DataTable) {
-    return;
+    return null;
   }
 
   const el = $(config.selector);
   if (!el.length) {
-    return;
+    return null;
   }
 
   try {
@@ -183,6 +199,31 @@ export function initAdvancedDataTable(config: AdvancedDataTableConfig): void {
     }
 
     el.DataTable({
+      processing: true,
+      serverSide: true,
+      ajax: {
+        url: config.ajaxUrl,
+        data: (d: Record<string, unknown>) => {
+          if (config.customVars) {
+            Object.assign(d, config.customVars());
+          }
+        },
+        dataSrc: (json: {
+          data: Record<string, unknown>[];
+          recordsTotal: number;
+          recordsFiltered: number;
+          stats?: DataTableStats;
+        }) => {
+          config.onRowsReceived?.(json.data);
+          config.onLoaded?.({
+            recordsTotal: json.recordsTotal,
+            recordsFiltered: json.recordsFiltered,
+            stats: json.stats,
+          });
+          return json.data;
+        },
+      },
+      columns: config.columns,
       pageLength: config.pageLength ?? 10,
       lengthMenu: [
         [10, 20, 50, 100, -1],
@@ -201,6 +242,11 @@ export function initAdvancedDataTable(config: AdvancedDataTableConfig): void {
       language: DATATABLE_LANGUAGE,
       title: config.exportTitle,
       filename: config.exportFileName,
+      rowCallback: config.rowCallback
+        ? (row: HTMLElement, data: Record<string, unknown>) => {
+            config.rowCallback?.(row, data);
+          }
+        : undefined,
       drawCallback: () => {
         config.onDraw?.();
       },
@@ -208,32 +254,29 @@ export function initAdvancedDataTable(config: AdvancedDataTableConfig): void {
 
     const api = el.DataTable();
     setTimeout(() => mountTableControls(config, api), 50);
+    return api;
   } catch (err) {
-    console.error('DataTable init failed:', err);
+    console.error('Server-side DataTable init failed:', err);
+    return null;
   }
 }
 
-export function applyColumnFilters(selector: string, filters: ColumnFilterSpec[]): void {
-  const table = getTableApi(selector);
-  if (!table) {
-    return;
-  }
-
-  filters.forEach(({ columnIndex, value, smart }) => {
-    table.column(columnIndex).search(value.trim(), false, smart ?? false);
-  });
-  table.draw();
+/** Redraw table — sends current customVars to the server (custom_vars pattern). */
+export function redrawServerSideTable(selector: string, resetPaging = true): void {
+  getTableApi(selector)?.draw(resetPaging);
 }
 
-export function clearColumnFilters(selector: string, columnCount: number): void {
-  const table = getTableApi(selector);
-  if (!table) {
-    return;
-  }
+/** @deprecated Use redrawServerSideTable with server-side tables. */
+export function applyColumnFilters(_selector: string, _filters: ColumnFilterSpec[]): void {
+  redrawServerSideTable(_selector, true);
+}
 
-  for (let i = 0; i < columnCount; i++) {
-    table.column(i).search('');
-  }
-  table.search('');
-  table.draw();
+/** @deprecated Use redrawServerSideTable after clearing filter model. */
+export function clearColumnFilters(selector: string, _columnCount: number): void {
+  redrawServerSideTable(selector, true);
+}
+
+/** Backward-compatible alias — routes to server-side init. */
+export function initAdvancedDataTable(config: ServerSideDataTableConfig): DataTableApi | null {
+  return initServerSideDataTable(config);
 }
