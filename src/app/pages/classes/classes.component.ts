@@ -1,13 +1,8 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
-import { MatSelectModule } from '@angular/material/select';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 
 import { Class, Teacher } from '../../core/models/educational.models';
 import { ClassService } from '../../core/services/class.service';
@@ -29,17 +24,11 @@ const API_BASE = 'http://localhost:3000';
   imports: [
     CommonModule,
     FormsModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatTooltipModule,
     LucideAngularModule,
-    MatSelectModule,
-    MatFormFieldModule,
-    MatInputModule
   ],
   templateUrl: './classes.component.html',
 })
-export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ClassesComponent implements OnInit, OnDestroy {
   private readonly tableSelector = '#classesTable';
   private tableWrapperEl: HTMLElement | null = null;
   private rowCache = new Map<string, Record<string, unknown>>();
@@ -67,12 +56,6 @@ export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTeachers();
-  }
-
-  ngAfterViewInit(): void {
-    if (!this.isLoading) {
-      this.initDataTable();
-    }
   }
 
   ngOnDestroy(): void {
@@ -248,10 +231,4 @@ export class ClassesComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     }
   }
-
-  onSearchChange(event: Event): void {
-    const searchValue = (event.target as HTMLInputElement).value;
-    this.filters.name = searchValue;
-    this.applyTableFilters();
-  } 
 }

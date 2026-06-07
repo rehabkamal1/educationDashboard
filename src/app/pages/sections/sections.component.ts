@@ -1,9 +1,7 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 import { Class, Section } from '../../core/models/educational.models';
 import { SectionService } from '../../core/services/section.service';
@@ -26,14 +24,11 @@ const API_BASE = 'http://localhost:3000';
   imports: [
     CommonModule,
     FormsModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatTooltipModule,
-    LucideAngularModule
+    LucideAngularModule,
   ],
   templateUrl: './sections.component.html',
 })
-export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
+export class SectionsComponent implements OnInit, OnDestroy {
   private readonly tableSelector = '#sectionsTable';
   private tableWrapperEl: HTMLElement | null = null;
   private rowCache = new Map<string, Record<string, unknown>>();
@@ -63,12 +58,6 @@ export class SectionsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadMetadata();
-  }
-
-  ngAfterViewInit(): void {
-    if (!this.isLoading) {
-      this.initDataTable();
-    }
   }
 
   ngOnDestroy(): void {

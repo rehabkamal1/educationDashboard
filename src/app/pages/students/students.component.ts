@@ -1,11 +1,7 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 import { forkJoin } from 'rxjs';
 
@@ -32,16 +28,11 @@ const API_BASE = 'http://localhost:3000';
   imports: [
     CommonModule,
     FormsModule,
-    MatInputModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatTooltipModule,
-    MatCardModule,
-    LucideAngularModule
+    LucideAngularModule,
   ],
   templateUrl: './students.component.html',
 })
-export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
+export class StudentsComponent implements OnInit, OnDestroy {
   private readonly tableSelector = '#studentsTable';
   private tableWrapperEl: HTMLElement | null = null;
 
@@ -81,12 +72,6 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadMetadata();
-  }
-
-  ngAfterViewInit(): void {
-    if (!this.isLoading) {
-      this.initDataTable();
-    }
   }
 
   ngOnDestroy(): void {
@@ -429,10 +414,6 @@ export class StudentsComponent implements OnInit, AfterViewInit, OnDestroy {
     const studentSections = this.getStudentSections(studentId);
     const classIds = new Set(studentSections.map(s => s.classId));
     return this.classes.filter(c => classIds.has(c.id)).map(c => c.name);
-  }
-
-  getInitials(name: string): string {
-    return getInitials(name);
   }
 
   getStudentLecturesCount(studentId: number | string): number {

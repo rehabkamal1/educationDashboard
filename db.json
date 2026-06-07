@@ -94,6 +94,13 @@
       "status": "Active",
       "creationDate": "2026-06-06",
       "id": "Ry786V-"
+    },
+    {
+      "name": "احمد ]",
+      "email": "ahmed@gmail.com",
+      "phone": "213456",
+      "status": "Active",
+      "id": "RZw4R3Z"
     }
   ],
   "teachers": [
@@ -135,9 +142,9 @@
   ],
   "classes": [
     {
-      "id": "2",
-      "name": "Linear Algebra",
-      "teacherId": 2
+      "name": "Linear Algebr",
+      "teacherId": 2,
+      "id": "2"
     },
     {
       "id": "4",
