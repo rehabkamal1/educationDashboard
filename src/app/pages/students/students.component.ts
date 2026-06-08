@@ -12,13 +12,15 @@ import { ClassService } from '../../core/services/class.service';
 import { LectureService } from '../../core/services/lecture.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StudentDialogComponent } from './student-dialog.component';
+import { SectionDialogComponent } from '../sections/section-dialog.component';
+import { SectionEnrollmentDialogComponent } from '../sections/section-enrollment-dialog.component';
 import {
   destroyAdvancedDataTable,
   getTableApi,
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, renderIdBadge, renderStudentRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderIdBadge, renderSectionActions, renderStudentRow } from '../../core/utils/datatable-cell-render.util';
 import {
   buildDetailRowHtml,
   buildDetailSection,
@@ -233,6 +235,23 @@ export class StudentsComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     const action = actionBtn.getAttribute('data-dt-action');
     const id = actionBtn.getAttribute('data-dt-id') ?? '';
+    const entity = actionBtn.getAttribute('data-dt-entity');
+
+    if (entity === 'section') {
+      const section = this.sections.find((s) => String(s.id) === id);
+      if (!section) {
+        return;
+      }
+      if (action === 'enroll') {
+        this.openSectionEnrollmentDialog(section);
+      } else if (action === 'edit') {
+        this.openSectionEditDialog(section);
+      } else if (action === 'delete') {
+        this.deleteSection(section.id);
+      }
+      return;
+    }
+
     const rowData = this.expandedRowCache.get(id) ?? this.getRowDataFromTable(id);
     if (!rowData) {
       return;
@@ -305,11 +324,12 @@ export class StudentsComponent implements OnInit, OnDestroy {
         escapeHtml(section.name),
         escapeHtml(cls?.name ?? '—'),
         String(lectureCount),
+        renderSectionActions(section.id, true),
       ];
     });
     const content = buildDetailSection(
       'Enrolled Sections (from sections table)',
-      buildSubTable(['Section ID', 'Section Name', 'Class', 'Lectures'], rows)
+      buildSubTable(['Section ID', 'Section Name', 'Class', 'Lectures', 'Actions'], rows)
     );
     return buildDetailRowHtml(9, content);
   }
@@ -404,5 +424,61 @@ export class StudentsComponent implements OnInit, OnDestroy {
   private toggleExpand(id: string): void {
     this.expandedId = this.expandedId === id ? null : id;
     redrawServerSideTable(this.tableSelector, false);
+  }
+
+  private openSectionEditDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionDialogComponent, {
+      width: '450px',
+      data: { section, classes: this.classes },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.sectionService.update(section.id, result).subscribe({
+          next: () => {
+            this.toast.success('Section updated.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Update failed.'),
+        });
+      }
+    });
+  }
+
+  private openSectionEnrollmentDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionEnrollmentDialogComponent, {
+      width: '520px',
+      data: { section },
+    });
+    dialogRef.afterClosed().subscribe(() => this.refreshExpandedMetadata());
+  }
+
+  private deleteSection(id: number | string): void {
+    if (confirm('Are you sure you want to delete this section?')) {
+      this.sectionService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Section deleted.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Delete failed.'),
+      });
+    }
+  }
+
+  private refreshExpandedMetadata(): void {
+    const expandedId = this.expandedId;
+    forkJoin({
+      sections: this.sectionService.getAll(),
+      classes: this.classService.getAll(),
+      lectures: this.lectureService.getAll(),
+    }).subscribe({
+      next: (res) => {
+        this.sections = res.sections;
+        this.classes = res.classes;
+        this.lectures = res.lectures;
+        this.expandedId = expandedId;
+        redrawServerSideTable(this.tableSelector, false);
+      },
+      error: () => this.toast.error('Failed to refresh enrolled sections.'),
+    });
   }
 }

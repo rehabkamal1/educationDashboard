@@ -15,7 +15,7 @@ import {
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, renderIdBadge, renderLectureRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderIdBadge, renderLectureActions, renderLectureRow } from '../../core/utils/datatable-cell-render.util';
 import {
   buildDetailRowHtml,
   buildDetailSection,
@@ -111,6 +111,17 @@ export class LecturesComponent implements OnInit, OnDestroy {
       nonOrderableTargets: [4, 5],
       exportFileName: 'lectures',
       exportTitle: 'Lectures',
+
+
+
+
+
+
+
+
+
+
+      
       customVars: () => ({
         idFilter: this.filters.id,
         titleFilter: this.filters.title,
@@ -157,6 +168,21 @@ export class LecturesComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     const action = btn.getAttribute('data-dt-action');
     const id = btn.getAttribute('data-dt-id') ?? '';
+    const entity = btn.getAttribute('data-dt-entity');
+
+    if (entity === 'lecture') {
+      const lecture = this.allLectures.find((l) => String(l.id) === id);
+      if (!lecture) {
+        return;
+      }
+      if (action === 'edit') {
+        this.openSubTableLectureEditDialog(lecture);
+      } else if (action === 'delete') {
+        this.deleteSubTableLecture(lecture.id);
+      }
+      return;
+    }
+
     const rowData = this.rowCache.get(id);
     if (!rowData) {
       return;
@@ -211,6 +237,7 @@ export class LecturesComponent implements OnInit, OnDestroy {
       renderIdBadge(item.id),
       escapeHtml(item.title),
       escapeHtml(item.duration),
+      renderLectureActions(item.id, true),
     ]);
 
     const content =
@@ -220,7 +247,7 @@ export class LecturesComponent implements OnInit, OnDestroy {
       ) +
       buildDetailSection(
         'Lectures in Same Section',
-        buildSubTable(['Lecture ID', 'Title', 'Duration'], lectureRows)
+        buildSubTable(['Lecture ID', 'Title', 'Duration', 'Actions'], lectureRows)
       );
 
     return buildDetailRowHtml(6, content);
@@ -315,5 +342,47 @@ export class LecturesComponent implements OnInit, OnDestroy {
         error: () => this.toast.error('Failed to delete lecture.')
       });
     }
+  }
+
+  private openSubTableLectureEditDialog(lecture: Lecture): void {
+    const dialogRef = this.dialog.open(LectureDialogComponent, {
+      width: '460px',
+      data: { lecture, sections: this.sections },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.lectureService.update(lecture.id, result).subscribe({
+          next: () => {
+            this.toast.success('Lecture updated.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Update failed.'),
+        });
+      }
+    });
+  }
+
+  private deleteSubTableLecture(id: number | string): void {
+    if (confirm('Are you sure you want to delete this lecture?')) {
+      this.lectureService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Lecture deleted successfully.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Failed to delete lecture.'),
+      });
+    }
+  }
+
+  private refreshExpandedMetadata(): void {
+    const expandedId = this.expandedId;
+    this.lectureService.getAll().subscribe({
+      next: (lectures) => {
+        this.allLectures = lectures;
+        this.expandedId = expandedId;
+        redrawServerSideTable(this.tableSelector, false);
+      },
+      error: () => this.toast.error('Failed to refresh section lectures.'),
+    });
   }
 }

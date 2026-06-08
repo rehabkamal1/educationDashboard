@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 import { Class, Section, Student } from '../../core/models/educational.models';
+import { StudentDialogComponent } from '../students/student-dialog.component';
 import { SectionService } from '../../core/services/section.service';
 import { ClassService } from '../../core/services/class.service';
 import { StudentService } from '../../core/services/student.service';
@@ -15,7 +16,7 @@ import {
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, renderIdBadge, renderSectionRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderIdBadge, renderSectionRow, renderStudentActions } from '../../core/utils/datatable-cell-render.util';
 import {
   buildDetailRowHtml,
   buildDetailSection,
@@ -158,6 +159,21 @@ export class SectionsComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     const action = btn.getAttribute('data-dt-action');
     const id = btn.getAttribute('data-dt-id') ?? '';
+    const entity = btn.getAttribute('data-dt-entity');
+
+    if (entity === 'student') {
+      const student = this.students.find((s) => String(s.id) === id);
+      if (!student) {
+        return;
+      }
+      if (action === 'edit') {
+        this.openStudentEditDialog(student);
+      } else if (action === 'delete') {
+        this.deleteStudent(student.id);
+      }
+      return;
+    }
+
     const rowData = this.rowCache.get(id);
     if (!rowData) {
       return;
@@ -208,10 +224,11 @@ export class SectionsComponent implements OnInit, OnDestroy {
       escapeHtml(student.name),
       escapeHtml(student.email),
       escapeHtml(student.status),
+      renderStudentActions(student.id, true),
     ]);
     const content = buildDetailSection(
       'Enrolled Students (from students table)',
-      buildSubTable(['Student ID', 'Student Name', 'Email', 'Status'], rows)
+      buildSubTable(['Student ID', 'Student Name', 'Email', 'Status', 'Actions'], rows)
     );
     return buildDetailRowHtml(6, content);
   }
@@ -319,5 +336,47 @@ export class SectionsComponent implements OnInit, OnDestroy {
         error: () => this.toast.error('Delete failed.')
       });
     }
+  }
+
+  private openStudentEditDialog(student: Student): void {
+    const dialogRef = this.dialog.open(StudentDialogComponent, {
+      width: '450px',
+      data: { student },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.studentService.update(student.id, result).subscribe({
+          next: () => {
+            this.toast.success('Student updated successfully.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Could not update student details.'),
+        });
+      }
+    });
+  }
+
+  private deleteStudent(id: number | string): void {
+    if (confirm('Are you sure you want to delete this student registration?')) {
+      this.studentService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Student deleted successfully.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Could not delete student.'),
+      });
+    }
+  }
+
+  private refreshExpandedMetadata(): void {
+    const expandedId = this.expandedId;
+    this.studentService.getAll().subscribe({
+      next: (students) => {
+        this.students = students;
+        this.expandedId = expandedId;
+        redrawServerSideTable(this.tableSelector, false);
+      },
+      error: () => this.toast.error('Failed to refresh enrolled students.'),
+    });
   }
 }

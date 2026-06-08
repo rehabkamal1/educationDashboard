@@ -10,12 +10,13 @@ import { ClassService } from '../../core/services/class.service';
 import { SectionService } from '../../core/services/section.service';
 import { ToastService } from '../../core/services/toast.service';
 import { TeacherDialogComponent } from './teacher-dialog.component';
+import { ClassDialogComponent } from '../classes/class-dialog.component';
 import {
   destroyAdvancedDataTable,
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, renderIdBadge, renderTeacherRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderClassActions, renderIdBadge, renderTeacherRow } from '../../core/utils/datatable-cell-render.util';
 import {
   buildDetailRowHtml,
   buildDetailSection,
@@ -46,6 +47,7 @@ export class TeachersComponent implements AfterViewInit, OnDestroy {
 
   classes: Class[] = [];
   sections: Section[] = [];
+  teachers: Teacher[] = [];
   expandedId: string | null = null;
   tableReady = false;
   recordsTotal = 0;
@@ -70,13 +72,18 @@ export class TeachersComponent implements AfterViewInit, OnDestroy {
   ) {}
 
   ngAfterViewInit(): void {
-    this.classService.getAll().subscribe({
-      next: (classes) => {
-        this.classes = classes;
-        this.sectionService.getAll().subscribe({
-          next: (sections) => {
-            this.sections = sections;
-            this.initDataTable();
+    this.teacherService.getAll().subscribe({
+      next: (teachers) => {
+        this.teachers = teachers;
+        this.classService.getAll().subscribe({
+          next: (classes) => {
+            this.classes = classes;
+            this.sectionService.getAll().subscribe({
+              next: (sections) => {
+                this.sections = sections;
+                this.initDataTable();
+              },
+            });
           },
         });
       },
@@ -168,6 +175,21 @@ export class TeachersComponent implements AfterViewInit, OnDestroy {
     event.stopPropagation();
     const action = btn.getAttribute('data-dt-action');
     const id = btn.getAttribute('data-dt-id') ?? '';
+    const entity = btn.getAttribute('data-dt-entity');
+
+    if (entity === 'class') {
+      const cls = this.classes.find((c) => String(c.id) === id);
+      if (!cls) {
+        return;
+      }
+      if (action === 'edit') {
+        this.openClassEditDialog(cls);
+      } else if (action === 'delete') {
+        this.deleteClass(cls.id);
+      }
+      return;
+    }
+
     const rowData = this.rowCache.get(id);
     if (!rowData) {
       return;
@@ -216,11 +238,12 @@ export class TeachersComponent implements AfterViewInit, OnDestroy {
         renderIdBadge(cls.id),
         escapeHtml(cls.name),
         String(sectionCount),
+        renderClassActions(cls.id, true),
       ];
     });
     const content = buildDetailSection(
       'Assigned Classes (from classes table)',
-      buildSubTable(['Class ID', 'Class Name', 'Sections Count'], rows)
+      buildSubTable(['Class ID', 'Class Name', 'Sections Count', 'Actions'], rows)
     );
     return buildDetailRowHtml(7, content);
   }
@@ -283,5 +306,52 @@ export class TeachersComponent implements AfterViewInit, OnDestroy {
         error: () => this.toast.error('Failed to delete teacher.'),
       });
     }
+  }
+
+  private openClassEditDialog(cls: Class): void {
+    const dialogRef = this.dialog.open(ClassDialogComponent, {
+      width: '500px',
+      data: { class: cls, teachers: this.teachers },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.classService.update(cls.id, result).subscribe({
+          next: () => {
+            this.toast.success('Class updated successfully.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Failed to update class.'),
+        });
+      }
+    });
+  }
+
+  private deleteClass(id: number | string): void {
+    if (confirm('Delete this class?')) {
+      this.classService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Class deleted.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Failed to delete class.'),
+      });
+    }
+  }
+
+  private refreshExpandedMetadata(): void {
+    const expandedId = this.expandedId;
+    this.classService.getAll().subscribe({
+      next: (classes) => {
+        this.classes = classes;
+        this.sectionService.getAll().subscribe({
+          next: (sections) => {
+            this.sections = sections;
+            this.expandedId = expandedId;
+            redrawServerSideTable(this.tableSelector, false);
+          },
+        });
+      },
+      error: () => this.toast.error('Failed to refresh assigned classes.'),
+    });
   }
 }

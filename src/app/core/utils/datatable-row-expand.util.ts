@@ -74,10 +74,12 @@ export function buildSubTable(headers: string[], rows: string[][]): string {
     return '<p class="detail-empty">No related records found.</p>';
   }
   const head = headers
-    .map(
-      (h, i) =>
-        `<th class="sortable-th" data-col="${i}" role="button" tabindex="0" aria-sort="none">${escapeHtml(h)}<span class="sort-indicator" aria-hidden="true"></span></th>`
-    )
+    .map((h, i) => {
+      if (h === 'Actions') {
+        return `<th class="col-actions">${escapeHtml(h)}</th>`;
+      }
+      return `<th class="sortable-th" data-col="${i}" role="button" tabindex="0" aria-sort="none">${escapeHtml(h)}<span class="sort-indicator" aria-hidden="true"></span></th>`;
+    })
     .join('');
   const body = rows.map((cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('');
   return `<div class="detail-subtable-wrap"><table class="detail-subtable sortable-subtable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;

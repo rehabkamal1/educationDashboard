@@ -10,12 +10,14 @@ import { TeacherService } from '../../core/services/teacher.service';
 import { SectionService } from '../../core/services/section.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ClassDialogComponent } from './class-dialog.component';
+import { SectionDialogComponent } from '../sections/section-dialog.component';
+import { SectionEnrollmentDialogComponent } from '../sections/section-enrollment-dialog.component';
 import {
   destroyAdvancedDataTable,
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, renderClassRow, renderIdBadge } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderClassRow, renderIdBadge, renderSectionActions } from '../../core/utils/datatable-cell-render.util';
 import {
   buildDetailRowHtml,
   buildDetailSection,
@@ -46,6 +48,7 @@ export class ClassesComponent implements OnInit, OnDestroy {
 
   teachers: Teacher[] = [];
   sections: Section[] = [];
+  allClasses: Class[] = [];
   expandedId: string | null = null;
   isLoading = true;
   tableReady = false;
@@ -153,6 +156,23 @@ export class ClassesComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     const action = btn.getAttribute('data-dt-action');
     const id = btn.getAttribute('data-dt-id') ?? '';
+    const entity = btn.getAttribute('data-dt-entity');
+
+    if (entity === 'section') {
+      const section = this.sections.find((s) => String(s.id) === id);
+      if (!section) {
+        return;
+      }
+      if (action === 'enroll') {
+        this.openSectionEnrollmentDialog(section);
+      } else if (action === 'edit') {
+        this.openSectionEditDialog(section);
+      } else if (action === 'delete') {
+        this.deleteSection(section.id);
+      }
+      return;
+    }
+
     const rowData = this.rowCache.get(id);
     if (!rowData) {
       return;
@@ -197,10 +217,11 @@ export class ClassesComponent implements OnInit, OnDestroy {
       renderIdBadge(section.id),
       escapeHtml(section.name),
       String((section.studentIds ?? []).length),
+      renderSectionActions(section.id, true),
     ]);
     const content = buildDetailSection(
       'Class Sections (from sections table)',
-      buildSubTable(['Section ID', 'Section Name', 'Enrolled Students'], rows)
+      buildSubTable(['Section ID', 'Section Name', 'Enrolled Students', 'Actions'], rows)
     );
     return buildDetailRowHtml(5, content);
   }
@@ -224,16 +245,26 @@ export class ClassesComponent implements OnInit, OnDestroy {
     this.teacherService.getAll().subscribe({
       next: (teachers) => {
         this.teachers = teachers;
-        this.sectionService.getAll().subscribe({
-          next: (sections) => {
-            this.sections = sections;
-            this.expandedId = null;
-            this.isLoading = false;
-            this.cdr.detectChanges();
-            this.refreshDataTable();
+        this.classService.getAll().subscribe({
+          next: (classes) => {
+            this.allClasses = classes;
+            this.sectionService.getAll().subscribe({
+              next: (sections) => {
+                this.sections = sections;
+                this.expandedId = null;
+                this.isLoading = false;
+                this.cdr.detectChanges();
+                this.refreshDataTable();
+              },
+              error: () => {
+                this.toast.error('Failed to load class sections.');
+                this.isLoading = false;
+                this.cdr.detectChanges();
+              },
+            });
           },
           error: () => {
-            this.toast.error('Failed to load class sections.');
+            this.toast.error('Failed to load classes.');
             this.isLoading = false;
             this.cdr.detectChanges();
           },
@@ -300,5 +331,61 @@ export class ClassesComponent implements OnInit, OnDestroy {
         error: () => this.toast.error('Failed to delete class.')
       });
     }
+  }
+
+  private openSectionEditDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionDialogComponent, {
+      width: '450px',
+      data: { section, classes: this.allClasses },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.sectionService.update(section.id, result).subscribe({
+          next: () => {
+            this.toast.success('Section updated.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Update failed.'),
+        });
+      }
+    });
+  }
+
+  private openSectionEnrollmentDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionEnrollmentDialogComponent, {
+      width: '520px',
+      data: { section },
+    });
+    dialogRef.afterClosed().subscribe(() => this.refreshExpandedMetadata());
+  }
+
+  private deleteSection(id: number | string): void {
+    if (confirm('Are you sure you want to delete this section?')) {
+      this.sectionService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Section deleted.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Delete failed.'),
+      });
+    }
+  }
+
+  private refreshExpandedMetadata(): void {
+    const expandedId = this.expandedId;
+    this.classService.getAll().subscribe({
+      next: (classes) => {
+        this.allClasses = classes;
+        this.sectionService.getAll().subscribe({
+          next: (sections) => {
+            this.sections = sections;
+            this.expandedId = expandedId;
+            redrawServerSideTable(this.tableSelector, false);
+          },
+          error: () => this.toast.error('Failed to refresh class sections.'),
+        });
+      },
+      error: () => this.toast.error('Failed to refresh class sections.'),
+    });
   }
 }

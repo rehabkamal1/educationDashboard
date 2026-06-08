@@ -189,27 +189,14 @@
   ],
   "sections": [
     {
-      "id": "2",
       "name": "MATH-201-Section B",
-      "classId": 2,
-      "studentIds": [
-        2,
-        4,
-        5,
-        3,
-        7
-      ]
+      "classId": 4,
+      "id": "2"
     },
     {
-      "id": "4",
       "name": "LIT-150-Section A",
-      "classId": 4,
-      "studentIds": [
-        3,
-        6,
-        7,
-        null
-      ]
+      "classId": 7,
+      "id": "4"
     },
     {
       "name": "صثقفغ",
@@ -232,11 +219,8 @@
       ]
     },
     {
-      "name": "teacher section",
+      "name": "teacher sections",
       "classId": "Wz-Hduo",
-      "studentIds": [
-        "n1bUt47"
-      ],
       "id": "mtOkgZh"
     }
   ],
