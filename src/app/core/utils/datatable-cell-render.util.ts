@@ -15,15 +15,55 @@ export function getInitials(name: string): string {
   return name.charAt(0).toUpperCase() || '?';
 }
 
-function actionBtn(action: string, id: string | number, label: string, cssClass: string): string {
-  return `<button type="button" class="action-btn ${cssClass}" data-dt-action="${action}" data-dt-id="${escapeHtml(String(id))}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${escapeHtml(label.charAt(0))}</button>`;
+function actionBtn(
+  action: string,
+  id: string | number,
+  label: string,
+  cssClass: string,
+  entity?: string
+): string {
+  const entityAttr = entity ? ` data-dt-entity="${escapeHtml(entity)}"` : '';
+const icon =
+  action === 'edit'
+    ? '✏️'
+    : action === 'delete'
+    ? '🗑️'
+    : action === 'enroll'
+    ? '👤+'
+    : '';
+
+return `<button type="button" class="action-btn ${cssClass}" data-dt-action="${action}" data-dt-id="${escapeHtml(String(id))}"${entityAttr} aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${icon}</button>`;}
+
+export function renderStudentActions(id: string | number, subTable = false): string {
+  const entity = subTable ? 'student' : undefined;
+  return `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit', entity)}${actionBtn('delete', id, 'Delete', 'delete', entity)}</div>`;
+}
+
+export function renderSectionActions(id: string | number, subTable = false): string {
+  const entity = subTable ? 'section' : undefined;
+  return `<div class="action-buttons">${actionBtn('enroll', id, 'Enroll', 'enroll', entity)}${actionBtn('edit', id, 'Edit', 'edit', entity)}${actionBtn('delete', id, 'Delete', 'delete', entity)}</div>`;
+}
+
+export function renderClassActions(id: string | number, subTable = false): string {
+  const entity = subTable ? 'class' : undefined;
+  return `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit', entity)}${actionBtn('delete', id, 'Delete', 'delete', entity)}</div>`;
+}
+
+export function renderLectureActions(id: string | number, subTable = false): string {
+  const entity = subTable ? 'lecture' : undefined;
+  return `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit', entity)}${actionBtn('delete', id, 'Delete', 'delete', entity)}</div>`;
+}
+
+export function renderTeacherActions(id: string | number, subTable = false): string {
+  const entity = subTable ? 'teacher' : undefined;
+  return `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit', entity)}${actionBtn('delete', id, 'Delete', 'delete', entity)}</div>`;
 }
 
 export function renderIdBadge(id: string | number): string {
   return `<span class="id-badge" data-export="#${escapeHtml(String(id))}">#${escapeHtml(String(id))}</span>`;
 }
 
-export function renderStudentRow(row: Record<string, unknown>, expandedId: string | null): string[] {
+export function renderStudentRow(row: Record<string, unknown>): string[] {
   const id = String(row['id'] ?? '');
   const name = String(row['name'] ?? '');
   const email = String(row['email'] ?? '');
@@ -33,21 +73,19 @@ export function renderStudentRow(row: Record<string, unknown>, expandedId: strin
   const classNamesText = String(row['classNamesText'] ?? 'None enrolled');
   const sectionsCount = Number(row['sectionsCount'] ?? 0);
   const lecturesCount = Number(row['lecturesCount'] ?? 0);
-  const isExpanded = expandedId === id;
-
   const classesHtml = classNames.length
     ? `<div class="chip-list" data-export="${escapeHtml(classNamesText)}">${classNames.map((n) => `<span class="class-chip">${escapeHtml(n)}</span>`).join('')}</div>`
     : `<span class="text-muted" data-export="None enrolled">None enrolled</span>`;
 
   return [
     renderIdBadge(id),
-    `<div class="student-cell"><span class="row-avatar">${escapeHtml(getInitials(name))}</span><span class="font-semibold text-primary" data-export="${escapeHtml(name)}">${escapeHtml(name)}</span><span class="row-expand-icon${isExpanded ? ' is-open' : ''}">▾</span></div>`,
+    `<div class="student-cell"><span class="row-avatar">${escapeHtml(getInitials(name))}</span><span class="font-semibold text-primary" data-export="${escapeHtml(name)}">${escapeHtml(name)}</span></div>`,
     `<div class="contact-stack" data-export="${escapeHtml(email)} | ${escapeHtml(phone)}"><span class="contact-line">✉ ${escapeHtml(email)}</span><span class="contact-line">☎ ${escapeHtml(phone)}</span></div>`,
     `<span class="status-badge ${escapeHtml(status.toLowerCase())}" data-export="${escapeHtml(status)}">${escapeHtml(status)}</span>`,
     classesHtml,
     `<span class="metric-pill" data-export="${sectionsCount}">▦ ${sectionsCount}</span>`,
     `<span class="metric-pill lectures" data-export="${lecturesCount}">▶ ${lecturesCount}</span>`,
-    `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit')}${actionBtn('delete', id, 'Delete', 'delete')}</div>`,
+    renderStudentActions(id),
   ];
 }
 
@@ -64,7 +102,7 @@ export function renderTeacherRow(row: Record<string, unknown>): string[] {
     `<span class="specialization-chip" data-export="${escapeHtml(specialization)}">${escapeHtml(specialization)}</span>`,
     `<span class="contact-line"><span data-export="${escapeHtml(email)}">✉ ${escapeHtml(email)}</span></span>`,
     `<span class="contact-line"><span data-export="${escapeHtml(phone)}">☎ ${escapeHtml(phone)}</span></span>`,
-    `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit')}${actionBtn('delete', id, 'Delete', 'delete')}</div>`,
+    renderTeacherActions(id),
   ];
 }
 
@@ -82,7 +120,7 @@ export function renderClassRow(row: Record<string, unknown>): string[] {
     renderIdBadge(id),
     `<div class="class-cell"><span class="row-avatar class">${escapeHtml(name.charAt(0) || '?')}</span><span class="font-semibold text-primary" data-export="${escapeHtml(name)}">${escapeHtml(name)}</span></div>`,
     instructorHtml,
-    `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit')}${actionBtn('delete', id, 'Delete', 'delete')}</div>`,
+    renderClassActions(id),
   ];
 }
 
@@ -97,7 +135,7 @@ export function renderSectionRow(row: Record<string, unknown>): string[] {
     `<div class="section-cell"><span class="row-avatar section">${escapeHtml(name.charAt(0) || '?')}</span><span class="font-semibold text-primary" data-export="${escapeHtml(name)}">${escapeHtml(name)}</span></div>`,
     `<span class="class-chip" data-export="${escapeHtml(className)}">📘 ${escapeHtml(className)}</span>`,
     `<span class="metric-pill" data-export="${enrolledCount}">👥 ${enrolledCount}</span>`,
-    `<div class="action-buttons">${actionBtn('enroll', id, 'Enroll', 'enroll')}${actionBtn('edit', id, 'Edit', 'edit')}${actionBtn('delete', id, 'Delete', 'delete')}</div>`,
+    renderSectionActions(id),
   ];
 }
 
@@ -112,6 +150,6 @@ export function renderLectureRow(row: Record<string, unknown>): string[] {
     `<div class="lecture-cell"><span class="row-avatar lecture">${escapeHtml(title.charAt(0) || '?')}</span><span class="font-semibold text-primary" data-export="${escapeHtml(title)}">${escapeHtml(title)}</span></div>`,
     `<span class="section-chip" data-export="${escapeHtml(sectionName)}">▦ ${escapeHtml(sectionName)}</span>`,
     `<span class="duration-pill" data-export="${escapeHtml(duration)}">⏱ ${escapeHtml(duration)}</span>`,
-    `<div class="action-buttons">${actionBtn('edit', id, 'Edit', 'edit')}${actionBtn('delete', id, 'Delete', 'delete')}</div>`,
+    renderLectureActions(id),
   ];
 }

@@ -101,6 +101,14 @@
       "phone": "213456",
       "status": "Active",
       "id": "RZw4R3Z"
+    },
+    {
+      "name": "shimaa kamal",
+      "email": "shimaa@gmail.com",
+      "phone": "123456",
+      "status": "Active",
+      "creationDate": "2026-06-07",
+      "id": "n1bUt47"
     }
   ],
   "teachers": [
@@ -138,6 +146,13 @@
       "email": "teacher2@gamil.com",
       "phone": "12345678",
       "id": "8odrt0o"
+    },
+    {
+      "name": "teacher shimaa",
+      "specialization": "teac",
+      "email": "teach@gmail.com",
+      "phone": "1234567",
+      "id": "wXzr9P3"
     }
   ],
   "classes": [
@@ -165,31 +180,23 @@
       "name": "class1",
       "teacherId": "Wdl8B3kOzE8",
       "id": "xzABpoq57qI"
+    },
+    {
+      "name": "teacher class",
+      "teacherId": "wXzr9P3",
+      "id": "Wz-Hduo"
     }
   ],
   "sections": [
     {
-      "id": "2",
       "name": "MATH-201-Section B",
-      "classId": 2,
-      "studentIds": [
-        2,
-        4,
-        5,
-        3,
-        7
-      ]
+      "classId": 4,
+      "id": "2"
     },
     {
-      "id": "4",
       "name": "LIT-150-Section A",
-      "classId": 4,
-      "studentIds": [
-        3,
-        6,
-        7,
-        null
-      ]
+      "classId": 7,
+      "id": "4"
     },
     {
       "name": "صثقفغ",
@@ -210,6 +217,11 @@
         "U2adbsN0w6c",
         5
       ]
+    },
+    {
+      "name": "teacher sections",
+      "classId": "Wz-Hduo",
+      "id": "mtOkgZh"
     }
   ],
   "lectures": [
@@ -230,6 +242,12 @@
       "sectionId": "vZnkGSr8HJA",
       "duration": "70",
       "id": "sVk_meoCgiw"
+    },
+    {
+      "title": "teacher lecture",
+      "sectionId": "mtOkgZh",
+      "duration": "90",
+      "id": "p6TrCcJ"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

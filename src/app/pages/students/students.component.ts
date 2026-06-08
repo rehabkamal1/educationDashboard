@@ -12,13 +12,25 @@ import { ClassService } from '../../core/services/class.service';
 import { LectureService } from '../../core/services/lecture.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StudentDialogComponent } from './student-dialog.component';
+import { SectionDialogComponent } from '../sections/section-dialog.component';
+import { SectionEnrollmentDialogComponent } from '../sections/section-enrollment-dialog.component';
 import {
   destroyAdvancedDataTable,
   getTableApi,
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, getInitials, renderStudentRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderIdBadge, renderSectionActions, renderStudentRow } from '../../core/utils/datatable-cell-render.util';
+import {
+  buildDetailRowHtml,
+  buildDetailSection,
+  buildExpandColumn,
+  buildSubTable,
+  handleExpandClick,
+  insertDetailRow,
+  removeDetailRows,
+  syncExpandedHighlight,
+} from '../../core/utils/datatable-row-expand.util';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -36,7 +48,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
   private readonly tableSelector = '#studentsTable';
   private tableWrapperEl: HTMLElement | null = null;
 
-  expandedElement: Student | null = null;
+  expandedId: string | null = null;
   expandedRowCache = new Map<string, Record<string, unknown>>();
 
   sections: Section[] = [];
@@ -102,49 +114,46 @@ export class StudentsComponent implements OnInit, OnDestroy {
       {
         data: 'id',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[0],
+          renderStudentRow(row)[0],
       },
       {
         data: 'name',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[1],
+          renderStudentRow(row)[1],
       },
       {
         data: 'email',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[2],
+          renderStudentRow(row)[2],
       },
       {
         data: 'status',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[3],
+          renderStudentRow(row)[3],
       },
       {
         data: 'classNamesText',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[4],
+          renderStudentRow(row)[4],
       },
       {
         data: 'sectionsCount',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[5],
+          renderStudentRow(row)[5],
       },
       {
         data: 'lecturesCount',
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[6],
+          renderStudentRow(row)[6],
       },
       {
         data: null,
         orderable: false,
         render: (_data: unknown, _type: string, row: Record<string, unknown>) =>
-          renderStudentRow(row, this.getExpandedId())[7],
+          renderStudentRow(row)[7],
       },
+      buildExpandColumn(() => this.expandedId),
     ];
-  }
-
-  private getExpandedId(): string | null {
-    return this.expandedElement ? String(this.expandedElement.id) : null;
   }
 
   private initDataTable(): void {
@@ -156,7 +165,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
       columns: this.buildColumns(),
       pageLength: 10,
       order: [[0, 'asc']],
-      nonOrderableTargets: [7],
+      nonOrderableTargets: [7, 8],
       exportFileName: 'students',
       exportTitle: 'Students',
       customVars: () => ({
@@ -185,12 +194,11 @@ export class StudentsComponent implements OnInit, OnDestroy {
         });
       },
       rowCallback: (row, data) => {
-        row.classList.add('data-row', 'clickable-row');
-        row.setAttribute('data-student-id', String(data['id'] ?? ''));
+        row.classList.add('data-row');
+        row.setAttribute('data-row-id', String(data['id'] ?? ''));
       },
       onDraw: () => {
-        this.renderInlineDetailRow();
-        this.syncExpandedRowHighlight();
+        this.renderExpandedDetail();
       },
     });
     this.attachTableListeners();
@@ -216,46 +224,43 @@ export class StudentsComponent implements OnInit, OnDestroy {
   }
 
   private handleTableClick = (event: Event): void => {
-    const target = event.target as HTMLElement;
-
-    if (target.closest('.detail-panel-close')) {
-      this.closeDetailPanel(event);
+    if (handleExpandClick(event, this.expandedId, (id) => this.toggleExpand(id))) {
       return;
     }
 
-    const actionBtn = target.closest('[data-dt-action]') as HTMLElement | null;
-    if (actionBtn) {
-      event.stopPropagation();
-      const action = actionBtn.getAttribute('data-dt-action');
-      const id = actionBtn.getAttribute('data-dt-id') ?? '';
-      const rowData = this.expandedRowCache.get(id) ?? this.getRowDataFromTable(id);
-      if (!rowData) {
+    const actionBtn = (event.target as HTMLElement).closest('[data-dt-action]') as HTMLElement | null;
+    if (!actionBtn) {
+      return;
+    }
+    event.stopPropagation();
+    const action = actionBtn.getAttribute('data-dt-action');
+    const id = actionBtn.getAttribute('data-dt-id') ?? '';
+    const entity = actionBtn.getAttribute('data-dt-entity');
+
+    if (entity === 'section') {
+      const section = this.sections.find((s) => String(s.id) === id);
+      if (!section) {
         return;
       }
-      const student = this.toStudent(rowData);
-      if (action === 'edit') {
-        this.openEditDialog(student, event);
+      if (action === 'enroll') {
+        this.openSectionEnrollmentDialog(section);
+      } else if (action === 'edit') {
+        this.openSectionEditDialog(section);
       } else if (action === 'delete') {
-        this.deleteStudent(student.id, event);
+        this.deleteSection(section.id);
       }
       return;
     }
 
-    if (target.closest('.action-buttons')) {
+    const rowData = this.expandedRowCache.get(id) ?? this.getRowDataFromTable(id);
+    if (!rowData) {
       return;
     }
-
-    const row = target.closest(`${this.tableSelector} tbody tr.data-row`);
-    if (!row) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const studentId = row.getAttribute('data-student-id') ?? '';
-    const rowData = this.expandedRowCache.get(studentId) ?? this.getRowDataFromTable(studentId);
-    if (rowData) {
-      this.toggleRow(this.toStudent(rowData));
+    const student = this.toStudent(rowData);
+    if (action === 'edit') {
+      this.openEditDialog(student, event);
+    } else if (action === 'delete') {
+      this.deleteStudent(student.id, event);
     }
   };
 
@@ -272,7 +277,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
 
     let found: Record<string, unknown> | null = null;
     document.querySelectorAll(`${this.tableSelector} tbody tr.data-row`).forEach((rowEl) => {
-      if (rowEl.getAttribute('data-student-id') === id) {
+      if (rowEl.getAttribute('data-row-id') === id) {
         found = api.row(rowEl as HTMLElement).data();
       }
     });
@@ -290,94 +295,43 @@ export class StudentsComponent implements OnInit, OnDestroy {
     };
   }
 
-  private syncExpandedRowHighlight(): void {
-    document.querySelectorAll(`${this.tableSelector} tbody tr.data-row`).forEach(row => {
-      row.classList.remove('is-expanded');
-    });
-
-    if (!this.expandedElement) {
+  private renderExpandedDetail(): void {
+    syncExpandedHighlight(this.tableSelector, this.expandedId, 'data-row-id');
+    if (!this.expandedId) {
+      removeDetailRows(this.tableSelector);
       return;
     }
-
-    const activeRow = document.querySelector(
-      `${this.tableSelector} tbody tr.data-row[data-student-id="${this.expandedElement.id}"]`
+    const rowData = this.expandedRowCache.get(this.expandedId);
+    if (!rowData) {
+      return;
+    }
+    const student = this.toStudent(rowData);
+    insertDetailRow(
+      this.tableSelector,
+      this.expandedId,
+      'data-row-id',
+      this.buildStudentDetailHtml(student)
     );
-    activeRow?.classList.add('is-expanded');
   }
 
-  private removeAllDetailRows(): void {
-    document.querySelectorAll(`${this.tableSelector} tbody tr.student-detail-row`).forEach(row => row.remove());
-  }
-
-  private renderInlineDetailRow(): void {
-    this.removeAllDetailRows();
-
-    if (!this.expandedElement) {
-      return;
-    }
-
-    const freshRow = this.expandedRowCache.get(String(this.expandedElement.id));
-    if (freshRow) {
-      this.expandedElement = this.toStudent(freshRow);
-    }
-
-    const activeRow = document.querySelector(
-      `${this.tableSelector} tbody tr.data-row[data-student-id="${this.expandedElement.id}"]`
-    ) as HTMLElement | null;
-
-    if (!activeRow || activeRow.style.display === 'none') {
-      return;
-    }
-
-    const detailRow = document.createElement('tr');
-    detailRow.className = 'student-detail-row';
-    detailRow.innerHTML = this.buildDetailRowHtml(this.expandedElement);
-    activeRow.insertAdjacentElement('afterend', detailRow);
-  }
-
-  private buildDetailRowHtml(student: Student): string {
-    const classNames = this.getStudentClassNames(student.id);
-    const sectionsCount = this.getStudentSections(student.id).length;
-    const lecturesCount = this.getStudentLecturesCount(student.id);
-    const creationDate = this.formatCreationDate(student.creationDate);
-    const classesHtml = classNames.length
-      ? `<div class="chip-list">${classNames.map(name => `<span class="class-chip">${escapeHtml(name)}</span>`).join('')}</div>`
-      : '<span class="text-muted">None enrolled</span>';
-
-    return `
-      <td colspan="8">
-        <div class="student-detail-panel inline">
-          <div class="detail-panel-header">
-            <div class="detail-panel-title">
-              <span class="row-avatar">${escapeHtml(getInitials(student.name))}</span>
-              <div>
-                <h3>${escapeHtml(student.name)}</h3>
-                <p>Enrollment profile &amp; course activity</p>
-              </div>
-            </div>
-            <button type="button" class="detail-panel-close" aria-label="Close details">&times;</button>
-          </div>
-          <div class="detail-panel-grid">
-            <div class="detail-stat">
-              <span class="detail-stat-label">Classes</span>
-              <div class="detail-stat-value">${classesHtml}</div>
-            </div>
-            <div class="detail-stat">
-              <span class="detail-stat-label">Number of Sections</span>
-              <span class="detail-stat-number">${sectionsCount}</span>
-            </div>
-            <div class="detail-stat">
-              <span class="detail-stat-label">Number of Lectures</span>
-              <span class="detail-stat-number">${lecturesCount}</span>
-            </div>
-            <div class="detail-stat">
-              <span class="detail-stat-label">Creation Date</span>
-              <span class="detail-stat-number date">${escapeHtml(creationDate)}</span>
-            </div>
-          </div>
-        </div>
-      </td>
-    `;
+  private buildStudentDetailHtml(student: Student): string {
+    const sections = this.getStudentSections(student.id);
+    const rows = sections.map((section) => {
+      const cls = this.classes.find((c) => c.id === section.classId);
+      const lectureCount = this.lectures.filter((l) => l.sectionId === section.id).length;
+      return [
+        renderIdBadge(section.id),
+        escapeHtml(section.name),
+        escapeHtml(cls?.name ?? '—'),
+        String(lectureCount),
+        renderSectionActions(section.id, true),
+      ];
+    });
+    const content = buildDetailSection(
+      'Enrolled Sections (from sections table)',
+      buildSubTable(['Section ID', 'Section Name', 'Class', 'Lectures', 'Actions'], rows)
+    );
+    return buildDetailRowHtml(9, content);
   }
 
   loadMetadata() {
@@ -392,7 +346,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
         this.sections = res.sections;
         this.classes = res.classes;
         this.lectures = res.lectures;
-        this.expandedElement = null;
+        this.expandedId = null;
         this.isLoading = false;
         this.cdr.detectChanges();
         this.refreshDataTable();
@@ -408,18 +362,6 @@ export class StudentsComponent implements OnInit, OnDestroy {
   getStudentSections(studentId: number | string): Section[] {
     const sid = String(studentId);
     return this.sections.filter(s => (s.studentIds || []).map(id => String(id)).includes(sid));
-  }
-
-  getStudentClassNames(studentId: number | string): string[] {
-    const studentSections = this.getStudentSections(studentId);
-    const classIds = new Set(studentSections.map(s => s.classId));
-    return this.classes.filter(c => classIds.has(c.id)).map(c => c.name);
-  }
-
-  getStudentLecturesCount(studentId: number | string): number {
-    const studentSections = this.getStudentSections(studentId);
-    const sectionIds = new Set(studentSections.map(s => s.id));
-    return this.lectures.filter(l => sectionIds.has(l.sectionId)).length;
   }
 
   openAddDialog() {
@@ -475,36 +417,68 @@ export class StudentsComponent implements OnInit, OnDestroy {
   }
 
   private reloadTable(): void {
-    this.expandedElement = null;
+    this.expandedId = null;
     redrawServerSideTable(this.tableSelector, false);
   }
 
-  toggleRow(element: Student) {
-    const wasExpanded = this.expandedElement?.id === element.id;
-    this.expandedElement = wasExpanded ? null : element;
+  private toggleExpand(id: string): void {
+    this.expandedId = this.expandedId === id ? null : id;
     redrawServerSideTable(this.tableSelector, false);
   }
 
-  closeDetailPanel(event: Event) {
-    event.stopPropagation();
-    this.expandedElement = null;
-    redrawServerSideTable(this.tableSelector, false);
+  private openSectionEditDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionDialogComponent, {
+      width: '450px',
+      data: { section, classes: this.classes },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.sectionService.update(section.id, result).subscribe({
+          next: () => {
+            this.toast.success('Section updated.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Update failed.'),
+        });
+      }
+    });
   }
 
-  formatCreationDate(date?: string): string {
-    if (!date) {
-      return '—';
+  private openSectionEnrollmentDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionEnrollmentDialogComponent, {
+      width: '520px',
+      data: { section },
+    });
+    dialogRef.afterClosed().subscribe(() => this.refreshExpandedMetadata());
+  }
+
+  private deleteSection(id: number | string): void {
+    if (confirm('Are you sure you want to delete this section?')) {
+      this.sectionService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Section deleted.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Delete failed.'),
+      });
     }
+  }
 
-    const parsed = new Date(`${date}T00:00:00`);
-    if (Number.isNaN(parsed.getTime())) {
-      return date;
-    }
-
-    return parsed.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+  private refreshExpandedMetadata(): void {
+    const expandedId = this.expandedId;
+    forkJoin({
+      sections: this.sectionService.getAll(),
+      classes: this.classService.getAll(),
+      lectures: this.lectureService.getAll(),
+    }).subscribe({
+      next: (res) => {
+        this.sections = res.sections;
+        this.classes = res.classes;
+        this.lectures = res.lectures;
+        this.expandedId = expandedId;
+        redrawServerSideTable(this.tableSelector, false);
+      },
+      error: () => this.toast.error('Failed to refresh enrolled sections.'),
     });
   }
 }
