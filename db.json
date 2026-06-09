@@ -196,14 +196,16 @@
     {
       "name": "LIT-150-Section A",
       "classId": 7,
-      "id": "4"
+      "id": "4",
+      "studentIds": [
+        4
+      ]
     },
     {
       "name": "صثقفغ",
       "classId": 2,
       "studentIds": [
         null,
-        6,
         null,
         "ufQJuOs8Od0"
       ],

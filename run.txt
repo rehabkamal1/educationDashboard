@@ -10,6 +10,53 @@ npx json-server --watch db.json --port 3000 --middlewares middleware.js
 # تشغيل تطبيق Angular (في terminal منفصل)
 npm start
 
+
+
+
+
+
+
+
+
+في الانترفيو على المشروع ده أكثر حاجة متوقع يطلبها منك:
+Search Function
+Filter Function
+Sort Function
+Export Function
+Delete Confirmation
+Reset Filters
+Toggle Details Row
+Custom Action Button
+
+وكل دول أماكنهم الأساسية:
+
+lectures.component.ts
+datatable-cell-render.util.ts
+datatable-advanced.util.ts
+
+فلو سألوك "اعملي Function" أول حاجة اسألي نفسك:
+
+الفانكشن بتتعامل مع UI؟
+→ lectures.component.ts
+
+بتضيف زر جديد في الـ DataTable؟
+→ datatable-cell-render.util.ts
+
+بتعدل سلوك الـ DataTable نفسه؟
+→ datatable-advanced.util.ts
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ملاحظات:
 # - جميع الـ IDs الآن رقمية (numeric) في db.json
 # - جميع الـ Services تحويل الـ IDs تلقائياً إلى أرقام عند الاستقبال
