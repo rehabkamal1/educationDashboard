@@ -10,12 +10,14 @@ import { SectionService } from '../../core/services/section.service';
 import { ClassService } from '../../core/services/class.service';
 import { ToastService } from '../../core/services/toast.service';
 import { LectureDialogComponent } from './lecture-dialog.component';
+import { SectionDialogComponent } from '../sections/section-dialog.component';
+import { SectionEnrollmentDialogComponent } from '../sections/section-enrollment-dialog.component';
 import {
   destroyAdvancedDataTable,
   initServerSideDataTable,
   redrawServerSideTable,
 } from '../../core/utils/datatable-advanced.util';
-import { escapeHtml, renderIdBadge, renderLectureActions, renderLectureRow } from '../../core/utils/datatable-cell-render.util';
+import { escapeHtml, renderIdBadge, renderLectureActions, renderLectureRow, renderSectionActions } from '../../core/utils/datatable-cell-render.util';
 import {
   buildDetailRowHtml,
   buildDetailSection,
@@ -157,6 +159,7 @@ export class LecturesComponent implements OnInit, OnDestroy {
   }
 
   private handleTableClick = (event: Event): void => {
+    
     if (handleExpandClick(event, this.expandedId, (id) => this.toggleExpand(id))) {
       return;
     }
@@ -169,6 +172,21 @@ export class LecturesComponent implements OnInit, OnDestroy {
     const action = btn.getAttribute('data-dt-action');
     const id = btn.getAttribute('data-dt-id') ?? '';
     const entity = btn.getAttribute('data-dt-entity');
+
+    if (entity === 'section') {
+      const section = this.sections.find((s) => String(s.id) === id);
+      if (!section) {
+        return;
+      }
+      if (action === 'enroll') {
+        this.openSectionEnrollmentDialog(section);
+      } else if (action === 'edit') {
+        this.openSectionEditDialog(section);
+      } else if (action === 'delete') {
+        this.deleteSection(section.id);
+      }
+      return;
+    }
 
     if (entity === 'lecture') {
       const lecture = this.allLectures.find((l) => String(l.id) === id);
@@ -231,6 +249,7 @@ export class LecturesComponent implements OnInit, OnDestroy {
       escapeHtml(section?.name ?? '—'),
       escapeHtml(cls?.name ?? '—'),
       String((section?.studentIds ?? []).length),
+      section ? renderSectionActions(section.id, true) : '—',
     ]];
 
     const lectureRows = sectionLectures.map((item) => [
@@ -243,7 +262,7 @@ export class LecturesComponent implements OnInit, OnDestroy {
     const content =
       buildDetailSection(
         'Section Details (from sections table)',
-        buildSubTable(['Section', 'Class', 'Enrolled Students'], infoRows)
+        buildSubTable(['Section', 'Class', 'Enrolled Students', 'Actions'], infoRows)
       ) +
       buildDetailSection(
         'Lectures in Same Section',
@@ -374,11 +393,55 @@ export class LecturesComponent implements OnInit, OnDestroy {
     }
   }
 
+  private openSectionEditDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionDialogComponent, {
+      width: '450px',
+      data: { section, classes: this.classes },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.sectionService.update(section.id, result).subscribe({
+          next: () => {
+            this.toast.success('Section updated.');
+            this.refreshExpandedMetadata();
+          },
+          error: () => this.toast.error('Update failed.'),
+        });
+      }
+    });
+  }
+
+  private openSectionEnrollmentDialog(section: Section): void {
+    const dialogRef = this.dialog.open(SectionEnrollmentDialogComponent, {
+      width: '520px',
+      data: { section },
+    });
+    dialogRef.afterClosed().subscribe(() => this.refreshExpandedMetadata());
+  }
+
+  private deleteSection(id: number | string): void {
+    if (confirm('Are you sure you want to delete this section?')) {
+      this.sectionService.delete(id as number).subscribe({
+        next: () => {
+          this.toast.success('Section deleted.');
+          this.refreshExpandedMetadata();
+        },
+        error: () => this.toast.error('Delete failed.'),
+      });
+    }
+  }
+
   private refreshExpandedMetadata(): void {
     const expandedId = this.expandedId;
-    this.lectureService.getAll().subscribe({
-      next: (lectures) => {
-        this.allLectures = lectures;
+    forkJoin({
+      sections: this.sectionService.getAll(),
+      classes: this.classService.getAll(),
+      lectures: this.lectureService.getAll(),
+    }).subscribe({
+      next: (res) => {
+        this.sections = res.sections;
+        this.classes = res.classes;
+        this.allLectures = res.lectures;
         this.expandedId = expandedId;
         redrawServerSideTable(this.tableSelector, false);
       },
